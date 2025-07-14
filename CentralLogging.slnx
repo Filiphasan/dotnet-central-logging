@@ -1,0 +1,10 @@
+﻿<Solution>
+  <Folder Name="/SolutionItems/">
+    <File Path="docker-compose.yml" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src\BgWorker\BgWorker.csproj" Type="Classic C#" />
+    <Project Path="src\Shared\Shared.csproj" Type="Classic C#" />
+    <Project Path="src\Web\Web.csproj" Type="Classic C#" />
+  </Folder>
+</Solution>
