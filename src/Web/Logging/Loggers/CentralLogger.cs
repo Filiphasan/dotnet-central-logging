@@ -63,17 +63,24 @@ public sealed class CentralLogger : ILogger
             Properties = LoggerHelper.ExtractProperties(state),
         };
 
-        var ctSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var cToken = ctSource.Token;
-        Task.Run(async () =>
+        try
         {
-            await _publishService.PublishAsync(new PublishMessageModel<LogEntryModel>
+            var ctSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var cToken = ctSource.Token;
+            Task.Run(async () =>
             {
-                ExchangeName = _exchangeName,
-                Message = logEntry,
-                JsonTypeInfo = LogEntryModelJsonContext.Default.LogEntryModel,
-                TryCount = 3
+                await _publishService.PublishAsync(new PublishMessageModel<LogEntryModel>
+                {
+                    ExchangeName = _exchangeName,
+                    Message = logEntry,
+                    JsonTypeInfo = LogEntryModelJsonContext.Default.LogEntryModel,
+                    TryCount = 3
+                }, cToken);
             }, cToken);
-        }, cToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
     }
 }
