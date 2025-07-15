@@ -81,8 +81,15 @@ public class LogTestEndpoint : ICarterModule
 
     private static async Task<IResult> ErrorTestAsync(string message, ILogger<LogTestEndpoint> logger)
     {
-        var exception = new Exception("Test Exception");
-        logger.LogError(exception, "Test Error Message: {Message}", message);
+        try
+        {
+            throw new Exception("Test Exception");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Test Error Message: {Message}", message);
+        }
+
         return Results.Ok();
     }
 

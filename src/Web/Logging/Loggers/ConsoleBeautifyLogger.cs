@@ -18,10 +18,8 @@ public sealed class ConsoleBeautifyLogger : ILogger
         _categoryName = categoryName;
         _configuration = configuration;
 
-        // Default configuration'dan temel ayarları al
         _defaultLogLevel = GetLogLevel(_configuration["Logging:LogLevel:Default"]);
 
-        // Kategori bazlı log level ayarları
         _categoryLogLevels = new Dictionary<string, LogLevel>();
         LoadCategoryLogLevels();
 
@@ -189,7 +187,6 @@ public sealed class ConsoleBeautifyLogger : ILogger
         }
         else
         {
-            // Eğer state IEnumerable<KeyValuePair<string, object>> değilse, JSON olarak serialize et
             properties["State"] = JsonSerializer.Serialize(state, _serializerOptions);
         }
 
