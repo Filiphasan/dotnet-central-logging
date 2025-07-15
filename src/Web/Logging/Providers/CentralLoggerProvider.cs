@@ -1,8 +1,10 @@
 using Web.Logging.Loggers;
+using Web.Logging.Models;
+using Web.Services.Interfaces;
 
 namespace Web.Logging.Providers;
 
-public sealed class CentralLoggerProvider : ILoggerProvider
+public sealed class CentralLoggerProvider(IPublishService publishService, Action<CentralLoggerConfiguration> configure) : ILoggerProvider
 {
     public void Dispose()
     {
@@ -11,6 +13,6 @@ public sealed class CentralLoggerProvider : ILoggerProvider
 
     public ILogger CreateLogger(string categoryName)
     {
-        return new CentralLogger();
+        return new CentralLogger(categoryName, publishService, configure);
     }
 }

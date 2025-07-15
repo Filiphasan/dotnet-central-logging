@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Web.Logging.Constants;
+using Web.Logging.Helpers;
 using Web.Logging.Models;
 using Web.Logging.Models.ConsoleBeautify;
 
@@ -11,7 +12,6 @@ public sealed class ConsoleBeautifyLogger : ILogger
     private readonly Dictionary<string, LogLevel> _categoryLogLevels;
     private readonly Dictionary<LogLevel, ConsoleColor> _logLevelColors;
     private readonly LogLevel _defaultLogLevel;
-    private readonly JsonSerializerOptions _serializerOptions;
 
     public ConsoleBeautifyLogger(string categoryName, IConfiguration configuration)
     {
@@ -32,8 +32,6 @@ public sealed class ConsoleBeautifyLogger : ILogger
             { LogLevel.Error, GetConsoleColor(configuration["Logging:ConsoleBeautify:Colors:Error"], ConsoleColor.Red) },
             { LogLevel.Critical, GetConsoleColor(configuration["Logging:ConsoleBeautify:Colors:Critical"], ConsoleColor.DarkMagenta) }
         };
-
-        _serializerOptions = new JsonSerializerOptions { WriteIndented = true };
     }
 
     public ConsoleBeautifyLogger(string categoryName, Action<ConsoleBeautifyLoggerConfiguration> configure)
@@ -47,8 +45,6 @@ public sealed class ConsoleBeautifyLogger : ILogger
 
         _categoryLogLevels = configuration.LogLevels;
         _logLevelColors = configuration.LogLevelColors;
-
-        _serializerOptions = new JsonSerializerOptions { WriteIndented = true };
     }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
@@ -73,7 +69,6 @@ public sealed class ConsoleBeautifyLogger : ILogger
 
         var message = formatter(state, exception);
 
-        // JSON formatında log objesi oluştur
         var logEntry = new LogEntryModel
         {
             Timestamp = DateTime.UtcNow,
@@ -82,45 +77,13 @@ public sealed class ConsoleBeautifyLogger : ILogger
             EventId = eventId.Id,
             EventName = eventId.Name,
             Message = message,
-            Exception = ExtractExceptionDetail(exception),
-            Properties = ExtractProperties(state),
+            Exception = LoggerHelper.ExtractExceptionDetail(exception),
+            Properties = LoggerHelper.ExtractProperties(state),
         };
 
         var jsonMessage = JsonSerializer.Serialize(logEntry, LogEntryModelJsonContext.Default.LogEntryModel);
 
         WriteColoredMessage(logLevel, jsonMessage);
-    }
-
-    private static ExceptionDetailModel? ExtractExceptionDetail(Exception? exception, int depth = 0)
-    {
-        if (exception is null || depth > 2)
-        {
-            return null;
-        }
-
-        Dictionary<string, string>? data = null;
-        if (exception.Data.Count > 0)
-        {
-            data = new Dictionary<string, string>();
-            foreach (System.Collections.DictionaryEntry entry in exception.Data)
-            {
-                var key = entry.Key.ToString() ?? string.Empty;
-                var value = entry.Value?.ToString() ?? string.Empty;
-                data[key] = value;
-            }
-        }
-
-        return new ExceptionDetailModel
-        {
-            Type = exception.GetType().FullName ?? "Unknown",
-            Message = exception.Message,
-            HResult = exception.HResult,
-            Source = exception.Source,
-            HelpLink = exception.HelpLink,
-            StackTrace = exception.StackTrace,
-            Data = data,
-            InnerException = ExtractExceptionDetail(exception.InnerException, depth + 1),
-        };
     }
 
     private void LoadCategoryLogLevelsFromConfiguration(IConfiguration configuration)
@@ -186,25 +149,6 @@ public sealed class ConsoleBeautifyLogger : ILogger
             ConsoleColorConstant.White => ConsoleColor.White,
             _ => defaultColor
         };
-    }
-
-    private Dictionary<string, object?> ExtractProperties<TState>(TState state)
-    {
-        var properties = new Dictionary<string, object?>();
-
-        if (state is IEnumerable<KeyValuePair<string, object>> stateProperties)
-        {
-            foreach (var property in stateProperties)
-            {
-                properties[property.Key] = property.Value;
-            }
-        }
-        else
-        {
-            properties["State"] = JsonSerializer.Serialize(state, _serializerOptions);
-        }
-
-        return properties;
     }
 
     private void WriteColoredMessage(LogLevel logLevel, string message)

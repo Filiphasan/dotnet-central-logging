@@ -20,7 +20,12 @@ builder.Services.AddLogging(logBuilder =>
             cfg.LogLevelColors.TryAdd(LogLevel.Error, ConsoleColor.Red);
             cfg.LogLevelColors.TryAdd(LogLevel.Critical, ConsoleColor.DarkRed);
         })
-        .AddCentralLogger();
+        .AddCentralLogger(null, cfg =>
+        {
+            cfg.IxdexPrefix = "web-api";
+            cfg.LogLevels.TryAdd("Default", LogLevel.Information);
+            cfg.LogLevels.TryAdd("Microsoft", LogLevel.Warning);
+        });
 });
 
 // Add services to the container.
