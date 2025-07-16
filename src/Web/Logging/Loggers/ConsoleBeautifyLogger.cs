@@ -9,29 +9,33 @@ namespace Web.Logging.Loggers;
 public sealed class ConsoleBeautifyLogger : ILogger
 {
     private readonly string _categoryName;
+    private readonly LogLevel _defaultLogLevel;
+    private readonly bool _isJsonFormatEnabled;
+    private readonly Dictionary<string, string> _enrichers;
     private readonly Dictionary<string, LogLevel> _categoryLogLevels;
     private readonly Dictionary<LogLevel, ConsoleColor> _logLevelColors;
-    private readonly LogLevel _defaultLogLevel;
 
     public ConsoleBeautifyLogger(string categoryName, IConfiguration configuration)
     {
         _categoryName = categoryName;
 
         _defaultLogLevel = GetLogLevel(configuration["Logging:LogLevel:Default"]);
+        _isJsonFormatEnabled = configuration.GetValue<bool>("Logging:ConsoleBeautify:JsonFormatEnabled");
+
+        _enrichers = new Dictionary<string, string>();
+        LoadEnrichersFromConfiguration(configuration);
 
         _categoryLogLevels = new Dictionary<string, LogLevel>();
         LoadCategoryLogLevelsFromConfiguration(configuration);
 
-        // Renk konfigürasyonu
-        _logLevelColors = new Dictionary<LogLevel, ConsoleColor>
-        {
-            { LogLevel.Trace, GetConsoleColor(configuration["Logging:ConsoleBeautify:Colors:Trace"], ConsoleColor.Gray) },
-            { LogLevel.Debug, GetConsoleColor(configuration["Logging:ConsoleBeautify:Colors:Debug"], ConsoleColor.Cyan) },
-            { LogLevel.Information, GetConsoleColor(configuration["Logging:ConsoleBeautify:Colors:Information"], ConsoleColor.Green) },
-            { LogLevel.Warning, GetConsoleColor(configuration["Logging:ConsoleBeautify:Colors:Warning"], ConsoleColor.Yellow) },
-            { LogLevel.Error, GetConsoleColor(configuration["Logging:ConsoleBeautify:Colors:Error"], ConsoleColor.Red) },
-            { LogLevel.Critical, GetConsoleColor(configuration["Logging:ConsoleBeautify:Colors:Critical"], ConsoleColor.DarkMagenta) }
-        };
+        _logLevelColors = LoggerHelper.GetDefaultLogLevelColors();
+        SetConsoleColor(_logLevelColors, configuration["Logging:ConsoleBeautify:Colors:Trace"], LogLevel.Trace);
+        SetConsoleColor(_logLevelColors, configuration["Logging:ConsoleBeautify:Colors:Debug"], LogLevel.Debug);
+        SetConsoleColor(_logLevelColors, configuration["Logging:ConsoleBeautify:Colors:Information"], LogLevel.Information);
+        SetConsoleColor(_logLevelColors, configuration["Logging:ConsoleBeautify:Colors:Warning"], LogLevel.Warning);
+        SetConsoleColor(_logLevelColors, configuration["Logging:ConsoleBeautify:Colors:Error"], LogLevel.Error);
+        SetConsoleColor(_logLevelColors, configuration["Logging:ConsoleBeautify:Colors:Critical"], LogLevel.Critical);
+        SetConsoleColor(_logLevelColors, configuration["Logging:ConsoleBeautify:Colors:None"], LogLevel.None);
     }
 
     public ConsoleBeautifyLogger(string categoryName, Action<ConsoleBeautifyLoggerConfiguration> configure)
@@ -39,10 +43,12 @@ public sealed class ConsoleBeautifyLogger : ILogger
         _categoryName = categoryName;
 
         var configuration = new ConsoleBeautifyLoggerConfiguration();
-        configure.Invoke(new ConsoleBeautifyLoggerConfiguration());
+        configure(configuration);
 
-        _defaultLogLevel = configuration.LogLevels.TryGetValue(_categoryName, out var categoryLevel) ? categoryLevel : _defaultLogLevel;
+        _defaultLogLevel = configuration.LogLevels.TryGetValue("Default", out var defaultLevel) ? defaultLevel : LogLevel.Information;
+        _isJsonFormatEnabled = configuration.JsonFormatEnabled;
 
+        _enrichers = configuration.Enrichers;
         _categoryLogLevels = configuration.LogLevels;
         _logLevelColors = configuration.LogLevelColors;
     }
@@ -78,14 +84,29 @@ public sealed class ConsoleBeautifyLogger : ILogger
             EventName = eventId.Name,
             Message = message,
             Exception = LoggerHelper.ExtractExceptionDetail(exception),
-            Properties = LoggerHelper.ExtractProperties(state),
+            Enrichers = _enrichers,
+            Properties = _isJsonFormatEnabled ? LoggerHelper.ExtractProperties(state) : null,
         };
 
-        var jsonMessage = JsonSerializer.Serialize(logEntry, LogEntryModelJsonContext.Default.LogEntryModel);
-
-        WriteColoredMessage(logLevel, jsonMessage);
+        if (_isJsonFormatEnabled)
+        {
+            WriteColoredJsonMessage(logLevel, logEntry);
+        }
+        else
+        {
+            WriteColoredMessage(logLevel, logEntry);
+        }
     }
 
+    private void LoadEnrichersFromConfiguration(IConfiguration configuration)
+    {
+        var enrichersSection = configuration.GetSection("Logging:ConsoleBeautify:Enrichers");
+        foreach (var item in enrichersSection.GetChildren())
+        {
+            _enrichers[item.Key] = item.Value ?? string.Empty;
+        }
+    }
+    
     private void LoadCategoryLogLevelsFromConfiguration(IConfiguration configuration)
     {
         var logLevelSection = configuration.GetSection("Logging:LogLevel");
@@ -122,14 +143,14 @@ public sealed class ConsoleBeautifyLogger : ILogger
         };
     }
 
-    private static ConsoleColor GetConsoleColor(string? colorString, ConsoleColor defaultColor)
+    private static void SetConsoleColor(Dictionary<LogLevel, ConsoleColor> logLevelColors, string? colorString, LogLevel logLevel)
     {
         if (string.IsNullOrEmpty(colorString))
         {
-            return defaultColor;
+            return;
         }
 
-        return colorString.ToUpper() switch
+        ConsoleColor? foundedColor = colorString.ToUpper() switch
         {
             ConsoleColorConstant.Black => ConsoleColor.Black,
             ConsoleColorConstant.DarkBlue => ConsoleColor.DarkBlue,
@@ -147,15 +168,52 @@ public sealed class ConsoleBeautifyLogger : ILogger
             ConsoleColorConstant.Magenta => ConsoleColor.Magenta,
             ConsoleColorConstant.Yellow => ConsoleColor.Yellow,
             ConsoleColorConstant.White => ConsoleColor.White,
-            _ => defaultColor
+            _ => null
         };
+
+        if (foundedColor is not null)
+        {
+            logLevelColors[logLevel] = foundedColor.Value;
+        }
     }
 
-    private void WriteColoredMessage(LogLevel logLevel, string message)
+    private void WriteColoredJsonMessage(LogLevel logLevel, LogEntryModel logEntry)
     {
         ConsoleColor originalColor = Console.ForegroundColor;
         Console.ForegroundColor = _logLevelColors[logLevel];
-        Console.WriteLine(message);
+        Console.WriteLine(JsonSerializer.Serialize(logEntry, LogEntryModelJsonContext.Default.LogEntryModel));
+        Console.ForegroundColor = originalColor;
+    }
+
+    private void WriteColoredMessage(LogLevel logLevel, LogEntryModel logEntry)
+    {
+        ConsoleColor originalColor = Console.ForegroundColor;
+
+        Console.ForegroundColor = _logLevelColors[logLevel];
+        Console.WriteLine("-------------------------------------------------");
+        Console.WriteLine($"[{logEntry.EventId,3}: {logLevel,-12} - {logEntry.Timestamp:yyyy-MM-dd HH:mm:ss.fffffff}]");
+        
+        Console.ForegroundColor = originalColor;
+        Console.Write("      Enrichers - ");
+
+        Console.ForegroundColor = _logLevelColors[logLevel];
+        Console.Write($"{string.Join(", ", logEntry.Enrichers.Select(x => x.Value))}");
+
+        Console.WriteLine();
+
+        Console.ForegroundColor = originalColor;
+        Console.Write($"      {logEntry.Source} - ");
+
+        Console.ForegroundColor = _logLevelColors[logLevel];
+        Console.Write($"{logEntry.Message}");
+
+        Console.WriteLine();
+
+        if (logEntry.Exception is not null)
+        {
+            Console.WriteLine($"      {logEntry.Exception.GetExceptionDetailedMessage()}");
+        }
+
         Console.ForegroundColor = originalColor;
     }
 }

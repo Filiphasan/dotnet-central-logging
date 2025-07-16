@@ -57,4 +57,18 @@ public static class LoggerHelper
 
         return properties;
     }
+
+    public static Dictionary<LogLevel, ConsoleColor> GetDefaultLogLevelColors()
+    {
+        return new Dictionary<LogLevel, ConsoleColor>
+        {
+            { LogLevel.Trace, ConsoleColor.Gray },
+            { LogLevel.Debug, ConsoleColor.Cyan },
+            { LogLevel.Information, ConsoleColor.Green },
+            { LogLevel.Warning, ConsoleColor.Yellow },
+            { LogLevel.Error, ConsoleColor.Red },
+            { LogLevel.Critical, ConsoleColor.DarkMagenta },
+            { LogLevel.None, ConsoleColor.White },
+        };
+    }
 }

@@ -11,6 +11,7 @@ public class LogEntryModel
     public string? EventName { get; set; }
     public string? Message { get; set; }
     public ExceptionDetailModel? Exception { get; set; }
+    public Dictionary<string, string> Enrichers { get; set; } = new();
     public Dictionary<string, object?>? Properties { get; set; }
 }
 

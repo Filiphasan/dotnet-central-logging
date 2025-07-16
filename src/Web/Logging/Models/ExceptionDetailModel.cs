@@ -10,4 +10,9 @@ public sealed record ExceptionDetailModel
     public string? HelpLink { get; set; }
     public Dictionary<string, string>? Data { get; set; }
     public ExceptionDetailModel? InnerException { get; set; }
+
+    public string GetExceptionDetailedMessage()
+    {
+        return $"{Type}: {Message}: {StackTrace}: {HResult}: {Source}: {HelpLink}: {InnerException?.GetExceptionDetailedMessage()}";
+    }
 }

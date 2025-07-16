@@ -9,23 +9,22 @@ builder.Services.AddLogging(logBuilder =>
 {
     logBuilder.ClearProviders()
         // First way of usage
-        .AddConsoleBeautifyLogger(builder.Configuration)
+        // .AddConsoleBeautifyLogger(builder.Configuration)
         // Second way of usage
         .AddConsoleBeautifyLogger(cfg =>
         {
-            cfg.LogLevels.TryAdd("Default", LogLevel.Information);
-            cfg.LogLevels.TryAdd("Microsoft", LogLevel.Warning);
-            cfg.LogLevelColors.TryAdd(LogLevel.Information, ConsoleColor.Green);
-            cfg.LogLevelColors.TryAdd(LogLevel.Warning, ConsoleColor.Yellow);
-            cfg.LogLevelColors.TryAdd(LogLevel.Error, ConsoleColor.Red);
-            cfg.LogLevelColors.TryAdd(LogLevel.Critical, ConsoleColor.DarkRed);
-        })
-        .AddCentralLogger(null, cfg =>
-        {
-            cfg.IxdexPrefix = "web-api";
-            cfg.LogLevels.TryAdd("Default", LogLevel.Information);
-            cfg.LogLevels.TryAdd("Microsoft", LogLevel.Warning);
+            cfg.JsonFormatEnabled = false;
+            cfg.LogLevels["Default"] = LogLevel.Information;
+            cfg.LogLevels["Microsoft"] = LogLevel.Warning;
+            cfg.Enrichers["Application"] = builder.Environment.ApplicationName;
+            cfg.Enrichers["Environment"] = builder.Environment.EnvironmentName;
         });
+    // .AddCentralLogger(builder.Services, cfg =>
+    // {
+    //     cfg.IxdexPrefix = "web-api";
+    //     cfg.LogLevels.TryAdd("Default", LogLevel.Information);
+    //     cfg.LogLevels.TryAdd("Microsoft", LogLevel.Warning);
+    // });
 });
 
 // Add services to the container.
