@@ -1,4 +1,4 @@
-namespace Web.Logging.Models;
+namespace Shared.Logging.Models;
 
 public sealed record ExceptionDetailModel
 {

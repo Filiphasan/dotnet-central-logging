@@ -1,9 +1,12 @@
-using Web.Logging.Models;
-using Web.Logging.Models.ConsoleBeautify;
-using Web.Logging.Providers;
-using Web.Services.Interfaces;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Shared.Logging.Models;
+using Shared.Logging.Models.ConsoleBeautify;
+using Shared.Logging.Providers;
+using Shared.Messaging.Services.Interfaces;
 
-namespace Web.Logging.Extensions;
+namespace Shared.Logging.Extensions;
 
 public static class LoggingExtension
 {

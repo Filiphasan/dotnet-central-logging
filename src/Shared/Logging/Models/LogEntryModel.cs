@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
-namespace Web.Logging.Models;
+namespace Shared.Logging.Models;
 
 public class LogEntryModel
 {

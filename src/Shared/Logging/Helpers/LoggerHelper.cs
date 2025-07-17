@@ -1,8 +1,10 @@
 using System.Text.Json;
-using Web.Logging.Constants;
-using Web.Logging.Models;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Shared.Logging.Constants;
+using Shared.Logging.Models;
 
-namespace Web.Logging.Helpers;
+namespace Shared.Logging.Helpers;
 
 public static class LoggerHelper
 {

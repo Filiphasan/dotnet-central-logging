@@ -1,10 +1,12 @@
 using System.Text.Json;
-using Web.Logging.Constants;
-using Web.Logging.Helpers;
-using Web.Logging.Models;
-using Web.Logging.Models.ConsoleBeautify;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Shared.Logging.Constants;
+using Shared.Logging.Helpers;
+using Shared.Logging.Models;
+using Shared.Logging.Models.ConsoleBeautify;
 
-namespace Web.Logging.Loggers;
+namespace Shared.Logging.Loggers;
 
 public sealed class ConsoleBeautifyLogger : ILogger
 {

@@ -1,6 +1,7 @@
-using Web.Logging.Helpers;
+using Microsoft.Extensions.Logging;
+using Shared.Logging.Helpers;
 
-namespace Web.Logging.Models.ConsoleBeautify;
+namespace Shared.Logging.Models.ConsoleBeautify;
 
 public class ConsoleBeautifyLoggerConfiguration
 {

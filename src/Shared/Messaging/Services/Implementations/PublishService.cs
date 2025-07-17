@@ -2,11 +2,10 @@ using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Shared.Messaging.Models;
 using Shared.Messaging.Services.Interfaces;
-using Web.Common.Models.Messaging;
-using Web.Services.Interfaces;
 
-namespace Web.Services.Implementations;
+namespace Shared.Messaging.Services.Implementations;
 
 public class PublishService(IChannelPoolService poolService) : IPublishService
 {

@@ -1,4 +1,4 @@
-namespace Web.Logging.Constants;
+namespace Shared.Logging.Constants;
 
 public static class ConsoleColorConstant
 {

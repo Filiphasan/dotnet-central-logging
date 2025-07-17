@@ -1,9 +1,9 @@
 using Carter;
 using Scalar.AspNetCore;
 using Shared;
-using Web.Logging.Extensions;
-using Web.Services.Implementations;
-using Web.Services.Interfaces;
+using Shared.Logging.Extensions;
+using Shared.Messaging.Services.Implementations;
+using Shared.Messaging.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 

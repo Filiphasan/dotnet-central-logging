@@ -1,4 +1,6 @@
-namespace Web.Logging.Models;
+using Microsoft.Extensions.Logging;
+
+namespace Shared.Logging.Models;
 
 public class CentralLoggerConfiguration
 {

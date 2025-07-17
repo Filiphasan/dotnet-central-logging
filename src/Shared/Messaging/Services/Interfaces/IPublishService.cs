@@ -1,6 +1,6 @@
-using Web.Common.Models.Messaging;
+using Shared.Messaging.Models;
 
-namespace Web.Services.Interfaces;
+namespace Shared.Messaging.Services.Interfaces;
 
 public interface IPublishService
 {

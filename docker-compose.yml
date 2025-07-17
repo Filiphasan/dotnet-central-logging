@@ -1,0 +1,40 @@
+services:
+  rabbitmq:
+    image: rabbitmq:latest-management
+    container_name: rabbit_mq
+    hostname: rabbit_mq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=vaFaL0kmRriXjK8t2AUrMAOGr3aG1veU
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq/mnesia
+
+  webapi:
+    container_name: web_api
+    build:
+      context: .
+      dockerfile: src/Web/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+    ports:
+      - "5001:80"
+    depends_on:
+      - rabbitmq
+
+  bgworker:
+    container_name: bg_worker
+    build:
+      context: .
+      dockerfile: src/BgWorker/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+    depends_on:
+      - rabbitmq
+
+
+volumes:
+  rabbitmq_data:
+    driver: local

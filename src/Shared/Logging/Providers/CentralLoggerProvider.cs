@@ -1,8 +1,9 @@
-using Web.Logging.Loggers;
-using Web.Logging.Models;
-using Web.Services.Interfaces;
+using Microsoft.Extensions.Logging;
+using Shared.Logging.Loggers;
+using Shared.Logging.Models;
+using Shared.Messaging.Services.Interfaces;
 
-namespace Web.Logging.Providers;
+namespace Shared.Logging.Providers;
 
 public sealed class CentralLoggerProvider(IPublishService publishService, Action<CentralLoggerConfiguration> configure) : ILoggerProvider
 {

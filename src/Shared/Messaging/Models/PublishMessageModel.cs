@@ -2,7 +2,7 @@ using System.Text.Json.Serialization.Metadata;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace Web.Common.Models.Messaging;
+namespace Shared.Messaging.Models;
 
 public class PublishMessageModel<TMessage> where TMessage : class
 {

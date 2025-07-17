@@ -1,8 +1,10 @@
 using System.Runtime.Versioning;
-using Web.Logging.Loggers;
-using Web.Logging.Models.ConsoleBeautify;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Shared.Logging.Loggers;
+using Shared.Logging.Models.ConsoleBeautify;
 
-namespace Web.Logging.Providers;
+namespace Shared.Logging.Providers;
 
 [UnsupportedOSPlatform("browser")]
 [ProviderAlias("ConsoleBeautify")]

@@ -1,10 +1,11 @@
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
-using Web.Common.Models.Messaging;
-using Web.Logging.Helpers;
-using Web.Logging.Models;
-using Web.Services.Interfaces;
+using Shared.Logging.Helpers;
+using Shared.Logging.Models;
+using Shared.Messaging.Models;
+using Shared.Messaging.Services.Interfaces;
 
-namespace Web.Logging.Loggers;
+namespace Shared.Logging.Loggers;
 
 public sealed class CentralLogger : ILogger
 {
@@ -76,7 +77,7 @@ public sealed class CentralLogger : ILogger
         {
             var ctSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var cToken = ctSource.Token;
-            Task.Run(async () =>
+            Task.Run((Func<Task?>)(async () =>
             {
                 var rkEnding = _isSpecific ? "specific" : "general";
                 var publishMessageModel = new PublishMessageModel<LogEntryModel>
@@ -92,7 +93,7 @@ public sealed class CentralLogger : ILogger
                     TryCount = 5,
                 };
                 await _publishService.PublishAsync(publishMessageModel, cToken);
-            }, cToken);
+            }), cToken);
         }
         catch (Exception ex)
         {
