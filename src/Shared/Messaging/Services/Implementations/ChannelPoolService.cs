@@ -1,30 +1,24 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using Shared.Messaging.Services.Interfaces;
 using Shared.Models.Options;
 
 namespace Shared.Messaging.Services.Implementations;
 
-public class ChannelPoolService : IChannelPoolService
+public class ChannelPoolService(IConnectionManager connectionManager, MessagingOptions messagingOptions, ILogger<ChannelPoolService> logger)
+    : IChannelPoolService
 {
     private readonly Lazy<ConcurrentBag<IChannel>> _channelBagLazy = new(() => []);
-    private readonly IConnectionManager _connectionManager;
-    private readonly MessagingOptions _messagingOptions;
-    private readonly ILogger<ChannelPoolService> _logger;
-
-    public ChannelPoolService(IConnectionManager connectionManager, MessagingOptions messagingOptions, ILogger<ChannelPoolService> logger)
-    {
-        _connectionManager = connectionManager;
-        _messagingOptions = messagingOptions;
-        _logger = logger;
-        _connectionManager.OptionalConnectionShutdownAsync += (_, _) => PurgeChannelPoolAsync();
-    }
+    private bool _isShutdownHandlerSet;
 
     private ConcurrentBag<IChannel> ChannelBag => _channelBagLazy.Value;
 
     public async Task<IChannel> GetChannelAsync(CancellationToken cancellationToken = default)
     {
+        await SetShutdownHandlerAsync(cancellationToken);
+
         if (ChannelBag.TryTake(out var channel))
         {
             return channel;
@@ -34,9 +28,33 @@ public class ChannelPoolService : IChannelPoolService
         return newChannel;
     }
 
+    private Task SetShutdownHandlerAsync(CancellationToken cancellationToken = default)
+    {
+        if (_isShutdownHandlerSet)
+        {
+            return Task.CompletedTask;
+        }
+
+        try
+        {
+            connectionManager.SetShutdownHandler(async _ => await PurgeChannelPoolAsync(cancellationToken));
+            _isShutdownHandlerSet = true;
+        }
+        catch (InvalidOperationException)
+        {
+            // pass
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error setting shutdown handler");
+        }
+
+        return Task.CompletedTask;
+    }
+
     private async Task<IChannel> CreateChannelAsync(CancellationToken cancellationToken = default)
     {
-        var channel = await _connectionManager.GetChannelAsync(cancellationToken);
+        var channel = await connectionManager.GetChannelAsync(cancellationToken);
         return channel;
     }
 
@@ -53,7 +71,7 @@ public class ChannelPoolService : IChannelPoolService
             return;
         }
 
-        if (ChannelBag.Count >= _messagingOptions.PoolSize)
+        if (ChannelBag.Count >= messagingOptions.PoolSize)
         {
             await channel.CloseAsync(cancellationToken);
             await channel.DisposeAsync().ConfigureAwait(false);
@@ -65,7 +83,7 @@ public class ChannelPoolService : IChannelPoolService
 
     public async Task PurgeChannelPoolAsync(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("PurgeChannelPoolAsync called, Pool size is {PoolSize}", ChannelBag.Count);
+        logger.LogInformation("PurgeChannelPoolAsync called, Pool size is {PoolSize}", ChannelBag.Count);
 
         while (ChannelBag.TryTake(out var channel))
         {
@@ -75,7 +93,7 @@ public class ChannelPoolService : IChannelPoolService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error disposing channel on PurgeChannelPoolAsync");
+                logger.LogError(ex, "Error disposing channel on PurgeChannelPoolAsync");
             }
         }
     }

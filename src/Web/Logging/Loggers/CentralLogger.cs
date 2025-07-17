@@ -12,6 +12,7 @@ public sealed class CentralLogger : ILogger
 
     private readonly string _indexPrefix;
     private readonly string _exchangeName;
+    private readonly Dictionary<string, string> _enrichers;
     private readonly Dictionary<string, LogLevel> _categoryLogLevels;
     private readonly LogLevel _defaultLogLevel;
 
@@ -25,6 +26,7 @@ public sealed class CentralLogger : ILogger
 
         _indexPrefix = configuration.IxdexPrefix;
         _exchangeName = configuration.ExchangeName;
+        _enrichers = configuration.Enrichers;
         _categoryLogLevels = configuration.LogLevels;
         _defaultLogLevel = configuration.LogLevels.TryGetValue("Default", out var defaultLevel) ? defaultLevel : LogLevel.Information;
     }
@@ -53,12 +55,14 @@ public sealed class CentralLogger : ILogger
 
         var logEntry = new LogEntryModel
         {
+            Index = _indexPrefix,
             Timestamp = DateTime.UtcNow,
             Level = logLevel.ToString(),
             Source = _categoryName,
             EventId = eventId.Id,
             EventName = eventId.Name,
             Message = message,
+            Enrichers = _enrichers,
             Exception = LoggerHelper.ExtractExceptionDetail(exception),
             Properties = LoggerHelper.ExtractProperties(state),
         };
@@ -69,13 +73,17 @@ public sealed class CentralLogger : ILogger
             var cToken = ctSource.Token;
             Task.Run(async () =>
             {
-                await _publishService.PublishAsync(new PublishMessageModel<LogEntryModel>
+                var publishMessageModel = new PublishMessageModel<LogEntryModel>
                 {
-                    ExchangeName = _exchangeName,
                     Message = logEntry,
                     JsonTypeInfo = LogEntryModelJsonContext.Default.LogEntryModel,
-                    TryCount = 3
-                }, cToken);
+                    TryCount = 5,
+                    Exchange =
+                    {
+                        Name = _exchangeName
+                    },
+                };
+                await _publishService.PublishAsync(publishMessageModel, cToken);
             }, cToken);
         }
         catch (Exception ex)

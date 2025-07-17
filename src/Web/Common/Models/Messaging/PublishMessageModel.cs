@@ -7,7 +7,7 @@ namespace Web.Common.Models.Messaging;
 public class PublishMessageModel<TMessage> where TMessage : class
 {
     public string? MessageId { get; set; }
-    public string ExchangeName { get; set; } = string.Empty;
+    public PublishMessageExchangeModel Exchange { get; set; } = PublishMessageExchangeModel.Default;
     public string QueueName { get; set; } = string.Empty;
     public TMessage? Message { get; set; }
     public byte Priority { get; set; }
@@ -17,4 +17,15 @@ public class PublishMessageModel<TMessage> where TMessage : class
     public Func<BasicReturnEventArgs, Task>? ReturnHandler { get; set; } = null;
     public IDictionary<string, object?>? Headers { get; set; }
     public JsonTypeInfo<TMessage>? JsonTypeInfo { get; set; } = null;
+}
+
+public class PublishMessageExchangeModel
+{
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = ExchangeType.Fanout;
+    public IDictionary<string, object?>? Arguments { get; set; }
+    public bool Durable { get; set; } = true;
+    public bool AutoDelete { get; set; } = false;
+
+    public static PublishMessageExchangeModel Default => new();
 }

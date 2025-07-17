@@ -37,9 +37,11 @@ public class PublishService(IChannelPoolService poolService) : IPublishService
                 : JsonSerializer.Serialize(message.Message, message.JsonTypeInfo);
             var body = Encoding.UTF8.GetBytes(serializedBody);
 
+            await DeclareExchangeIfNeedAsync(channel, message.Exchange, cancellationToken);
+
             await channel.BasicPublishAsync(
-                exchange: message.ExchangeName,
-                routingKey: string.IsNullOrEmpty(message.ExchangeName) ? message.QueueName : string.Empty,
+                exchange: message.Exchange.Name,
+                routingKey: string.IsNullOrEmpty(message.Exchange.Name) ? message.QueueName : string.Empty,
                 mandatory: message.Mandatory,
                 basicProperties: properties,
                 body: body,
@@ -67,5 +69,15 @@ public class PublishService(IChannelPoolService poolService) : IPublishService
 
             await poolService.ReturnChannelAsync(channel, cancellationToken);
         }
+    }
+
+    private static async Task DeclareExchangeIfNeedAsync(IChannel channel, PublishMessageExchangeModel exchange, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(exchange.Name))
+        {
+            return;
+        }
+
+        await channel.ExchangeDeclareAsync(exchange.Name, exchange.Type, exchange.Durable, exchange.AutoDelete, exchange.Arguments, cancellationToken: cancellationToken);
     }
 }

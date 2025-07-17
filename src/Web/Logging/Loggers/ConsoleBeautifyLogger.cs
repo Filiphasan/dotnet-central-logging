@@ -19,14 +19,14 @@ public sealed class ConsoleBeautifyLogger : ILogger
     {
         _categoryName = categoryName;
 
-        _defaultLogLevel = GetLogLevel(configuration["Logging:LogLevel:Default"]);
+        _defaultLogLevel = LoggerHelper.GetLogLevel(configuration["Logging:LogLevel:Default"]);
         _isJsonFormatEnabled = configuration.GetValue<bool>("Logging:ConsoleBeautify:JsonFormatEnabled");
 
         _enrichers = new Dictionary<string, string>();
-        LoadEnrichersFromConfiguration(configuration);
+        LoggerHelper.LoadEnrichersFromConfiguration("Logging:ConsoleBeautify:Enrichers", configuration, _enrichers);
 
         _categoryLogLevels = new Dictionary<string, LogLevel>();
-        LoadCategoryLogLevelsFromConfiguration(configuration);
+        LoggerHelper.LoadCategoryLogLevelsFromConfiguration("Logging:ConsoleBeautify:LogLevel" ,configuration, _categoryLogLevels);
 
         _logLevelColors = LoggerHelper.GetDefaultLogLevelColors();
         SetConsoleColor(_logLevelColors, configuration["Logging:ConsoleBeautify:Colors:Trace"], LogLevel.Trace);
@@ -96,51 +96,6 @@ public sealed class ConsoleBeautifyLogger : ILogger
         {
             WriteColoredMessage(logLevel, logEntry);
         }
-    }
-
-    private void LoadEnrichersFromConfiguration(IConfiguration configuration)
-    {
-        var enrichersSection = configuration.GetSection("Logging:ConsoleBeautify:Enrichers");
-        foreach (var item in enrichersSection.GetChildren())
-        {
-            _enrichers[item.Key] = item.Value ?? string.Empty;
-        }
-    }
-    
-    private void LoadCategoryLogLevelsFromConfiguration(IConfiguration configuration)
-    {
-        var logLevelSection = configuration.GetSection("Logging:LogLevel");
-        foreach (var item in logLevelSection.GetChildren())
-        {
-            if (item.Key != "Default")
-            {
-                _categoryLogLevels[item.Key] = GetLogLevel(item.Value);
-            }
-        }
-
-        var customLevelsSection = configuration.GetSection("Logging:ConsoleBeautify:LogLevel");
-        foreach (var item in customLevelsSection.GetChildren())
-        {
-            _categoryLogLevels[item.Key] = GetLogLevel(item.Value);
-        }
-    }
-
-    private static LogLevel GetLogLevel(string? logLevelString)
-    {
-        if (string.IsNullOrEmpty(logLevelString))
-            return LogLevel.Information;
-
-        return logLevelString.ToUpper() switch
-        {
-            LogLevelConstant.Trace => LogLevel.Trace,
-            LogLevelConstant.Debug => LogLevel.Debug,
-            LogLevelConstant.Information => LogLevel.Information,
-            LogLevelConstant.Warning => LogLevel.Warning,
-            LogLevelConstant.Error => LogLevel.Error,
-            LogLevelConstant.Critical => LogLevel.Critical,
-            LogLevelConstant.None => LogLevel.None,
-            _ => LogLevel.Information
-        };
     }
 
     private static void SetConsoleColor(Dictionary<LogLevel, ConsoleColor> logLevelColors, string? colorString, LogLevel logLevel)

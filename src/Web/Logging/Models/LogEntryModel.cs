@@ -4,6 +4,7 @@ namespace Web.Logging.Models;
 
 public class LogEntryModel
 {
+    public string Index { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public string Level { get; set; } = nameof(LogLevel.Information);
     public string? Source { get; set; }
