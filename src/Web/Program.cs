@@ -26,7 +26,7 @@ builder.Services.AddSingleton<IPublishService, PublishService>();
 
 builder.Logging.AddCentralLogger(builder.Services, cfg =>
 {
-    cfg.IxdexPrefix = "web-api";
+    cfg.LogKey = "web-api";
     cfg.ExchangeName = "central-logs-exchange";
     cfg.LogLevels.TryAdd("Default", LogLevel.Information);
     cfg.LogLevels.TryAdd("Microsoft", LogLevel.Warning);

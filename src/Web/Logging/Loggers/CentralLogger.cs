@@ -1,3 +1,4 @@
+using RabbitMQ.Client;
 using Web.Common.Models.Messaging;
 using Web.Logging.Helpers;
 using Web.Logging.Models;
@@ -10,7 +11,8 @@ public sealed class CentralLogger : ILogger
     private readonly string _categoryName;
     private readonly IPublishService _publishService;
 
-    private readonly string _indexPrefix;
+    private readonly string _logKey;
+    private readonly bool _isSpecific;
     private readonly string _exchangeName;
     private readonly Dictionary<string, string> _enrichers;
     private readonly Dictionary<string, LogLevel> _categoryLogLevels;
@@ -24,7 +26,8 @@ public sealed class CentralLogger : ILogger
         var configuration = new CentralLoggerConfiguration();
         configure(configuration);
 
-        _indexPrefix = configuration.IxdexPrefix;
+        _logKey = configuration.LogKey;
+        _isSpecific = configuration.IsSpecific;
         _exchangeName = configuration.ExchangeName;
         _enrichers = configuration.Enrichers;
         _categoryLogLevels = configuration.LogLevels;
@@ -49,13 +52,15 @@ public sealed class CentralLogger : ILogger
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         if (!IsEnabled(logLevel))
+        {
             return;
+        }
 
         var message = formatter(state, exception);
 
         var logEntry = new LogEntryModel
         {
-            Index = _indexPrefix,
+            LogKey = _logKey,
             Timestamp = DateTime.UtcNow,
             Level = logLevel.ToString(),
             Source = _categoryName,
@@ -73,15 +78,18 @@ public sealed class CentralLogger : ILogger
             var cToken = ctSource.Token;
             Task.Run(async () =>
             {
+                var rkEnding = _isSpecific ? "specific" : "general";
                 var publishMessageModel = new PublishMessageModel<LogEntryModel>
                 {
                     Message = logEntry,
                     JsonTypeInfo = LogEntryModelJsonContext.Default.LogEntryModel,
-                    TryCount = 5,
                     Exchange =
                     {
-                        Name = _exchangeName
+                        Name = _exchangeName,
+                        Type = ExchangeType.Topic,
                     },
+                    RoutingKey = $"project-{logEntry.LogKey.ToLower()}-{rkEnding}",
+                    TryCount = 5,
                 };
                 await _publishService.PublishAsync(publishMessageModel, cToken);
             }, cToken);

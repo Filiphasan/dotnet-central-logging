@@ -8,7 +8,7 @@ public class PublishMessageModel<TMessage> where TMessage : class
 {
     public string? MessageId { get; set; }
     public PublishMessageExchangeModel Exchange { get; set; } = PublishMessageExchangeModel.Default;
-    public string QueueName { get; set; } = string.Empty;
+    public string RoutingKey { get; set; } = string.Empty;
     public TMessage? Message { get; set; }
     public byte Priority { get; set; }
     public DeliveryModes DeliveryMode { get; set; } = DeliveryModes.Persistent;

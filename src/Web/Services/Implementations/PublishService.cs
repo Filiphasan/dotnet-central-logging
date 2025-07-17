@@ -41,7 +41,7 @@ public class PublishService(IChannelPoolService poolService) : IPublishService
 
             await channel.BasicPublishAsync(
                 exchange: message.Exchange.Name,
-                routingKey: string.IsNullOrEmpty(message.Exchange.Name) ? message.QueueName : string.Empty,
+                routingKey: message.RoutingKey,
                 mandatory: message.Mandatory,
                 basicProperties: properties,
                 body: body,
