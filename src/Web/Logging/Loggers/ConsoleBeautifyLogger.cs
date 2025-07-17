@@ -197,7 +197,7 @@ public sealed class ConsoleBeautifyLogger : ILogger
         Console.Write("      Enrichers - ");
 
         Console.ForegroundColor = _logLevelColors[logLevel];
-        Console.Write($"{string.Join(", ", logEntry.Enrichers.Select(x => x.Value))}");
+        Console.Write($"{string.Join(", ", logEntry.Enrichers.Select(x => $"{x.Key}: {x.Value}"))}");
 
         Console.WriteLine();
 
