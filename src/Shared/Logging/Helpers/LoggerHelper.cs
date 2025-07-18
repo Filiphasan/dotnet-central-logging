@@ -17,18 +17,6 @@ public static class LoggerHelper
             return null;
         }
 
-        Dictionary<string, string>? data = null;
-        if (exception.Data.Count > 0)
-        {
-            data = new Dictionary<string, string>();
-            foreach (System.Collections.DictionaryEntry entry in exception.Data)
-            {
-                var key = entry.Key.ToString() ?? string.Empty;
-                var value = entry.Value?.ToString() ?? string.Empty;
-                data[key] = value;
-            }
-        }
-
         return new ExceptionDetailModel
         {
             Type = exception.GetType().FullName ?? "Unknown",
@@ -37,7 +25,6 @@ public static class LoggerHelper
             Source = exception.Source,
             HelpLink = exception.HelpLink,
             StackTrace = exception.StackTrace,
-            Data = data,
             InnerException = ExtractExceptionDetail(exception.InnerException, depth + 1),
         };
     }

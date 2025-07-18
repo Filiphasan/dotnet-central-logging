@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Loggers;
-using Shared.Logging.Models;
+using Shared.Logging.Models.Central;
 using Shared.Messaging.Services.Interfaces;
 
 namespace Shared.Logging.Providers;

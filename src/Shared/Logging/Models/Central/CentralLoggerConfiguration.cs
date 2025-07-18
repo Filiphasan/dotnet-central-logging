@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace Shared.Logging.Models;
+namespace Shared.Logging.Models.Central;
 
 public class CentralLoggerConfiguration
 {

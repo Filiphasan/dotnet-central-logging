@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddRabbitMq(messagingOptions);
         services.AddSingleton<IConnectionManager, RabbitMqConnectionManager>();
         services.AddSingleton<IChannelPoolService, ChannelPoolService>();
+        services.AddSingleton<IPublishService, PublishService>();
         return services;
     }
 

@@ -2,10 +2,12 @@ using Carter;
 using Scalar.AspNetCore;
 using Shared;
 using Shared.Logging.Extensions;
-using Shared.Messaging.Services.Implementations;
-using Shared.Messaging.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
 builder.Logging.ClearProviders()
     // .AddConsoleBeautifyLogger(builder.Configuration)
@@ -22,7 +24,6 @@ builder.Logging.ClearProviders()
 builder.Services.AddOpenApi();
 builder.Services.AddShared(builder.Configuration)
     .AddCarter();
-builder.Services.AddSingleton<IPublishService, PublishService>();
 
 builder.Logging.AddCentralLogger(builder.Services, cfg =>
 {

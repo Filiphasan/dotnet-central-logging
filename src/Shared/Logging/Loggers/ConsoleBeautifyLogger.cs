@@ -138,7 +138,7 @@ public sealed class ConsoleBeautifyLogger : ILogger
     {
         ConsoleColor originalColor = Console.ForegroundColor;
         Console.ForegroundColor = _logLevelColors[logLevel];
-        Console.WriteLine(JsonSerializer.Serialize(logEntry, LogEntryModelJsonContext.Default.LogEntryModel));
+        Console.WriteLine(JsonSerializer.Serialize(logEntry, LogEntryHelper.GetIntendOption));
         Console.ForegroundColor = originalColor;
     }
 

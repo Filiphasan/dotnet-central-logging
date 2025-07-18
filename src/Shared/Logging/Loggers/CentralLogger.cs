@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using Shared.Logging.Helpers;
 using Shared.Logging.Models;
+using Shared.Logging.Models.Central;
 using Shared.Messaging.Models;
 using Shared.Messaging.Services.Interfaces;
 
@@ -83,7 +84,7 @@ public sealed class CentralLogger : ILogger
                 var publishMessageModel = new PublishMessageModel<LogEntryModel>
                 {
                     Message = logEntry,
-                    JsonTypeInfo = LogEntryModelJsonContext.Default.LogEntryModel,
+                    JsonSerializerOptions = LogEntryHelper.GetNonIntendOption,
                     Exchange =
                     {
                         Name = _exchangeName,

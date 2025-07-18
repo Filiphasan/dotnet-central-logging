@@ -1,5 +1,7 @@
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using Microsoft.IO;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Shared.Messaging.Models;
@@ -7,7 +9,7 @@ using Shared.Messaging.Services.Interfaces;
 
 namespace Shared.Messaging.Services.Implementations;
 
-public class PublishService(IChannelPoolService poolService) : IPublishService
+public class PublishService(IChannelPoolService poolService, RecyclableMemoryStreamManager recyclableMemoryStreamManager) : IPublishService
 {
     public async Task PublishAsync<T>(PublishMessageModel<T> message, CancellationToken cancellationToken = default) where T : class
     {
@@ -31,10 +33,12 @@ public class PublishService(IChannelPoolService poolService) : IPublishService
                 MessageId = message.MessageId,
                 Headers = message.Headers,
             };
-            var serializedBody = message.JsonTypeInfo is null
-                ? JsonSerializer.Serialize(message.Message)
-                : JsonSerializer.Serialize(message.Message, message.JsonTypeInfo);
+            var serializedBody = JsonSerializer.Serialize(message.Message, message.JsonSerializerOptions);
             var body = Encoding.UTF8.GetBytes(serializedBody);
+            if (message.CompressMessage)
+            {
+                body = await CompressBytesAsync(body, cancellationToken);
+            }
 
             await DeclareExchangeIfNeedAsync(channel, message.Exchange, cancellationToken);
 
@@ -68,6 +72,17 @@ public class PublishService(IChannelPoolService poolService) : IPublishService
 
             await poolService.ReturnChannelAsync(channel, cancellationToken);
         }
+    }
+
+    private async Task<byte[]> CompressBytesAsync(byte[] bytes, CancellationToken cancellationToken = default)
+    {
+        await using var memoryStream = recyclableMemoryStreamManager.GetStream();
+        await using (var brotli = new BrotliStream(memoryStream, CompressionLevel.Fastest, leaveOpen: true))
+        {
+            await brotli.WriteAsync(bytes, cancellationToken);
+        }
+
+        return memoryStream.ToArray();
     }
 
     private static async Task DeclareExchangeIfNeedAsync(IChannel channel, PublishMessageExchangeModel exchange, CancellationToken cancellationToken = default)

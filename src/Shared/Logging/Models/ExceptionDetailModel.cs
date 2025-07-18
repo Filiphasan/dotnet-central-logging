@@ -8,7 +8,6 @@ public sealed record ExceptionDetailModel
     public int? HResult { get; set; }
     public string? Source { get; set; }
     public string? HelpLink { get; set; }
-    public Dictionary<string, string>? Data { get; set; }
     public ExceptionDetailModel? InnerException { get; set; }
 
     public string GetExceptionDetailedMessage()

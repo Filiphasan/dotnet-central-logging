@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization.Metadata;
+using System.Text.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -16,7 +16,8 @@ public class PublishMessageModel<TMessage> where TMessage : class
     public bool Mandatory { get; set; } = false;
     public Func<BasicReturnEventArgs, Task>? ReturnHandler { get; set; } = null;
     public IDictionary<string, object?>? Headers { get; set; }
-    public JsonTypeInfo<TMessage>? JsonTypeInfo { get; set; } = null;
+    public JsonSerializerOptions? JsonSerializerOptions { get; set; } = null;
+    public bool CompressMessage { get; set; } = false;
 }
 
 public class PublishMessageExchangeModel

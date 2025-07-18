@@ -2,7 +2,6 @@ services:
   rabbitmq:
     image: rabbitmq:latest-management
     container_name: rabbit_mq
-    hostname: rabbit_mq
     ports:
       - "5672:5672"
       - "15672:15672"
