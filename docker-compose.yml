@@ -1,6 +1,6 @@
 services:
   rabbitmq:
-    image: rabbitmq:latest-management
+    image: rabbitmq:4.1.2-management
     container_name: rabbit_mq
     ports:
       - "5672:5672"
@@ -10,30 +10,69 @@ services:
       - RABBITMQ_DEFAULT_PASS=vaFaL0kmRriXjK8t2AUrMAOGr3aG1veU
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq/mnesia
-
-  webapi:
-    container_name: web_api
-    build:
-      context: .
-      dockerfile: src/Web/Dockerfile
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
     environment:
-      - ASPNETCORE_ENVIRONMENT=Docker
+      - node.name=es-node
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=vaFaL0kmRriXjK8t2AUrMAOGr3aG1veU
+      - xpack.security.enabled=true
+      - xpack.security.authc.api_key.enabled=true
+      - xpack.security.transport.ssl.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - bootstrap.memory_lock=true
+      - cluster.name=docker-cluster
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     ports:
-      - "5001:80"
-    depends_on:
-      - rabbitmq
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
 
-  bgworker:
-    container_name: bg_worker
-    build:
-      context: .
-      dockerfile: src/BgWorker/Dockerfile
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
     environment:
-      - ASPNETCORE_ENVIRONMENT=Docker
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN=AAEAAWVsYXN0aWMva2liYW5hL2tpYmFuYS1kb2NrZXItdG9rZW46WFdqT1AtcDVTX2FkMWdDRjZlUmNEdw
+#      - ELASTICSEARCH_USERNAME=elastic
+#      - ELASTICSEARCH_PASSWORD=vaFaL0kmRriXjK8t2AUrMAOGr3aG1veU
+    ports:
+      - "5601:5601"
     depends_on:
-      - rabbitmq
+      - elasticsearch
+
+#  webapi:
+#    container_name: web_api
+#    build:
+#      context: .
+#      dockerfile: src/Web/Dockerfile
+#    environment:
+#      - ASPNETCORE_ENVIRONMENT=Docker
+#    ports:
+#      - "5001:80"
+#    depends_on:
+#      - rabbitmq
+#
+#  bgworker:
+#    container_name: bg_worker
+#    build:
+#      context: .
+#      dockerfile: src/BgWorker/Dockerfile
+#    environment:
+#      - ASPNETCORE_ENVIRONMENT=Docker
+#    depends_on:
+#      - rabbitmq
+#      - elasticsearch
 
 
 volumes:
   rabbitmq_data:
+    driver: local
+  esdata:
     driver: local

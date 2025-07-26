@@ -33,7 +33,7 @@ public sealed class CentralLogger : ILogger
         _exchangeName = configuration.ExchangeName;
         _enrichers = configuration.Enrichers;
         _categoryLogLevels = configuration.LogLevels;
-        _defaultLogLevel = configuration.LogLevels.TryGetValue("Default", out var defaultLevel) ? defaultLevel : LogLevel.Information;
+        _defaultLogLevel = configuration.LogLevels.GetValueOrDefault("Default", LogLevel.Information);
     }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull

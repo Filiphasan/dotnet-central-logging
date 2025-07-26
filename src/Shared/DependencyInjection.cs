@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IO;
 using RabbitMQ.Client;
 using Shared.Messaging.Services.Implementations;
 using Shared.Messaging.Services.Interfaces;
@@ -19,6 +20,8 @@ public static class DependencyInjection
         services.AddSingleton<IConnectionManager, RabbitMqConnectionManager>();
         services.AddSingleton<IChannelPoolService, ChannelPoolService>();
         services.AddSingleton<IPublishService, PublishService>();
+        services.AddSingleton<RecyclableMemoryStreamManager>();
+        services.AddSingleton<ICompressorService, BrotliCompressorService>();
         return services;
     }
 

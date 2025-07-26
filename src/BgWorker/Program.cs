@@ -1,5 +1,4 @@
 using BgWorker;
-using Shared;
 using Shared.Logging.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -12,8 +11,7 @@ builder.Logging
     .ClearProviders()
     .AddConsoleBeautifyLogger(builder.Configuration);
 
-builder.Services.AddShared(builder.Configuration);
-builder.Services.AddHostedService<Worker>();
+builder.Services.AddBgWorker(builder.Configuration);
 
 var host = builder.Build();
 await host.RunAsync();
