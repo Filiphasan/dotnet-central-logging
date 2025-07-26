@@ -11,13 +11,13 @@ builder.Configuration
 
 builder.Logging.ClearProviders()
     // .AddConsoleBeautifyLogger(builder.Configuration)
-    .AddConsoleBeautifyLogger(cfg =>
+    .AddConsoleBeautifyLogger(options =>
     {
-        cfg.JsonFormatEnabled = false;
-        cfg.LogLevels["Default"] = LogLevel.Information;
-        cfg.LogLevels["Microsoft"] = LogLevel.Warning;
-        cfg.Enrichers["Application"] = builder.Environment.ApplicationName;
-        cfg.Enrichers["Environment"] = builder.Environment.EnvironmentName;
+        options
+            .AddEnricher("Application", builder.Environment.ApplicationName)
+            .AddEnricher("Environment", builder.Environment.EnvironmentName)
+            .SetMinimumLogLevel("Default", LogLevel.Information)
+            .SetMinimumLogLevel("Microsoft", LogLevel.Warning);
     });
 
 // Add services to the container.
@@ -25,12 +25,14 @@ builder.Services.AddOpenApi();
 builder.Services.AddShared(builder.Configuration)
     .AddCarter();
 
-builder.Logging.AddCentralLogger(builder.Services, cfg =>
+builder.Logging.AddCentralLogger(builder.Services, options =>
 {
-    cfg.LogKey = "web-api";
-    cfg.ExchangeName = "central-logs-exchange";
-    cfg.LogLevels.TryAdd("Default", LogLevel.Information);
-    cfg.LogLevels.TryAdd("Microsoft", LogLevel.Warning);
+    options.SetLogKey("web-api")
+        .SetExchangeName("central-logs-exchange")
+        .AddEnricher("Application", builder.Environment.ApplicationName)
+        .AddEnricher("Environment", builder.Environment.EnvironmentName)
+        .SetMinimumLogLevel("Default", LogLevel.Information)
+        .SetMinimumLogLevel("Microsoft", LogLevel.Warning);
 });
 
 var app = builder.Build();
