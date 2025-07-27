@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Constants;
@@ -8,7 +9,7 @@ namespace Shared.Logging.Helpers;
 
 public static class LoggerHelper
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = false, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
     public static ExceptionDetailModel? ExtractExceptionDetail(Exception? exception, int depth = 0)
     {
@@ -29,15 +30,22 @@ public static class LoggerHelper
         };
     }
 
-    public static Dictionary<string, object?> ExtractProperties<TState>(TState state)
+    public static Dictionary<string, string?> ExtractProperties<TState>(TState state)
     {
-        var properties = new Dictionary<string, object?>();
+        var properties = new Dictionary<string, string?>();
 
         if (state is IEnumerable<KeyValuePair<string, object>> stateProperties)
         {
             foreach (var property in stateProperties)
             {
-                properties[property.Key] = property.Value;
+                if (property.Key.StartsWith('@'))
+                {
+                    properties[property.Key] = JsonSerializer.Serialize(property.Value, SerializerOptions);
+                }
+                else
+                {
+                    properties[property.Key] = property.Value.ToString();
+                }
             }
         }
         else

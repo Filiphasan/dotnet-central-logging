@@ -2,6 +2,7 @@ using Carter;
 using Scalar.AspNetCore;
 using Shared;
 using Shared.Logging.Extensions;
+using Web.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration
@@ -25,6 +26,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddShared(builder.Configuration)
     .AddCarter();
 
+builder.Services.AddTransient<CorrelationMiddleware>();
+builder.Services.AddSingleton<RequestResponseLoggingMiddleware>();
+
 builder.Logging.AddCentralLogger(builder.Services, options =>
 {
     options.SetLogKey("webapi")
@@ -36,6 +40,7 @@ builder.Logging.AddCentralLogger(builder.Services, options =>
 });
 
 var app = builder.Build();
+app.UseMiddleware<CorrelationMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -50,6 +55,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseMiddleware<RequestResponseLoggingMiddleware>();
 app.UseHttpsRedirection();
 
 app.MapCarter();

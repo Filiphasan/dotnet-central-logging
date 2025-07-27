@@ -1,17 +1,15 @@
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using Shared.Logging.Helpers;
 using Shared.Logging.Models;
 using Shared.Logging.Models.Central;
-using Shared.Messaging.Models;
-using Shared.Messaging.Services.Interfaces;
+using Shared.Logging.Writer;
 
 namespace Shared.Logging.Loggers;
 
 public sealed class CentralLogger : ILogger
 {
     private readonly string _categoryName;
-    private readonly IPublishService _publishService;
+    private readonly CentralLogChannelWriter _centralLogChannelWriter;
 
     private readonly string _logKey;
     private readonly bool _isSpecific;
@@ -20,20 +18,17 @@ public sealed class CentralLogger : ILogger
     private readonly Dictionary<string, LogLevel> _categoryLogLevels;
     private readonly LogLevel _defaultLogLevel;
 
-    public CentralLogger(string categoryName, IPublishService publishService, Action<CentralLoggerConfiguration> configure)
+    public CentralLogger(string categoryName, CentralLogChannelWriter centralLogChannelWriter, CentralLoggerConfiguration config)
     {
         _categoryName = categoryName;
-        _publishService = publishService;
+        _centralLogChannelWriter = centralLogChannelWriter;
 
-        var configuration = new CentralLoggerConfiguration();
-        configure(configuration);
-
-        _logKey = configuration.LogKey;
-        _isSpecific = configuration.IsSpecific;
-        _exchangeName = configuration.ExchangeName;
-        _enrichers = configuration.Enrichers;
-        _categoryLogLevels = configuration.LogLevels;
-        _defaultLogLevel = configuration.LogLevels.GetValueOrDefault("Default", LogLevel.Information);
+        _logKey = config.LogKey;
+        _isSpecific = config.IsSpecific;
+        _exchangeName = config.ExchangeName;
+        _enrichers = config.Enrichers;
+        _categoryLogLevels = config.LogLevels;
+        _defaultLogLevel = config.LogLevels.GetValueOrDefault("Default", LogLevel.Information);
     }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
@@ -78,32 +73,6 @@ public sealed class CentralLogger : ILogger
             Exception = LoggerHelper.ExtractExceptionDetail(exception),
             Properties = LoggerHelper.ExtractProperties(state),
         };
-
-        try
-        {
-            var ctSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var cToken = ctSource.Token;
-            Task.Run((Func<Task?>)(async () =>
-            {
-                var rkEnding = _isSpecific ? "specific" : "general";
-                var publishMessageModel = new PublishMessageModel<LogEntryModel>
-                {
-                    Message = logEntry,
-                    JsonSerializerOptions = LogEntryHelper.GetNonIntendOption,
-                    Exchange =
-                    {
-                        Name = _exchangeName,
-                        Type = ExchangeType.Topic,
-                    },
-                    RoutingKey = $"project.{logEntry.LogKey.ToLower()}.{rkEnding}",
-                    TryCount = 5,
-                };
-                await _publishService.PublishAsync(publishMessageModel, cToken);
-            }), cToken);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-        }
+        _centralLogChannelWriter.Write(new CentralLogRecord(_exchangeName, _isSpecific, logEntry));
     }
 }

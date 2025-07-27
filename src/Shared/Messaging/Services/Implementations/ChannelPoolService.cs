@@ -64,15 +64,8 @@ public class ChannelPoolService(IConnectionManager connectionManager, MessagingO
             return;
         }
 
-        if (channel.IsClosed)
+        if (channel.IsClosed || ChannelBag.Count >= messagingOptions.PoolSize)
         {
-            await channel.DisposeAsync().ConfigureAwait(false);
-            return;
-        }
-
-        if (ChannelBag.Count >= messagingOptions.PoolSize)
-        {
-            await channel.CloseAsync(cancellationToken);
             await channel.DisposeAsync().ConfigureAwait(false);
             return;
         }

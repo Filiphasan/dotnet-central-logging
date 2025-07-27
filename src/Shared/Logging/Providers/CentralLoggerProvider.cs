@@ -1,11 +1,14 @@
+using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Loggers;
 using Shared.Logging.Models.Central;
-using Shared.Messaging.Services.Interfaces;
+using Shared.Logging.Writer;
 
 namespace Shared.Logging.Providers;
 
-public sealed class CentralLoggerProvider(IPublishService publishService, Action<CentralLoggerConfiguration> configure) : ILoggerProvider
+[UnsupportedOSPlatform("browser")]
+[ProviderAlias("CentralLogger")]
+public sealed class CentralLoggerProvider(CentralLogChannelWriter centralLogChannelWriter, CentralLoggerConfiguration config) : ILoggerProvider
 {
     public void Dispose()
     {
@@ -14,6 +17,6 @@ public sealed class CentralLoggerProvider(IPublishService publishService, Action
 
     public ILogger CreateLogger(string categoryName)
     {
-        return new CentralLogger(categoryName, publishService, configure);
+        return new CentralLogger(categoryName, centralLogChannelWriter, config);
     }
 }

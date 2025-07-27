@@ -39,10 +39,12 @@ public static class LoggingExtension
         var config = new CentralLoggerConfiguration();
         configure(config);
         services.AddSingleton(config);
-        
-        var publishService = services.BuildServiceProvider().GetRequiredService<IPublishService>();
-        builder.AddProvider(new CentralLoggerProvider(publishService, configure));
-        
+        services.AddSingleton<CentralLogChannelWriter>();
+
+        var centralLogChannelWriter = services.BuildServiceProvider().GetRequiredService<CentralLogChannelWriter>();
+        builder.AddProvider(new CentralLoggerProvider(centralLogChannelWriter, config));
+
+        // Alttaki kullanım circular dependency hatası oluşturur çünkü CentralLogChannelWriter içindeki servislerin bazıları ILogger bağımlı
         // services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, CentralLoggerProvider>());
         return builder;
     }

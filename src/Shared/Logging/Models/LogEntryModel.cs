@@ -15,14 +15,16 @@ public class LogEntryModel
     public string? Message { get; set; }
     public ExceptionDetailModel? Exception { get; set; }
     public Dictionary<string, string> Enrichers { get; set; } = new();
-    public Dictionary<string, object?>? Properties { get; set; }
+    public Dictionary<string, string?>? Properties { get; set; }
 }
 
-[JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(LogEntryModel))]
-[JsonSerializable(typeof(Dictionary<string, object?>))]
-[JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(ExceptionDetailModel))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
+[JsonSerializable(typeof(Dictionary<string, string?>))]
+[JsonSerializable(typeof(DateTime))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(int))]
 public partial class LogEntryModelJsonContext : JsonSerializerContext
 {
 }

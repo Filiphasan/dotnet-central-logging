@@ -18,7 +18,7 @@ public class EcsLogEntryModel : IElasticBulkModel
 
     [JsonPropertyName("labels")] public Dictionary<string, string>? Enrichers { get; set; }
 
-    [JsonPropertyName("fields")] public Dictionary<string, object?>? Properties { get; set; }
+    [JsonPropertyName("fields")] public Dictionary<string, string?>? Properties { get; set; }
 }
 
 public class EcsLog

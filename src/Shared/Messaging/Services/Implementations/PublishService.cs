@@ -49,7 +49,7 @@ public class PublishService(IChannelPoolService poolService, ICompressorService 
                 cancellationToken: cancellationToken
             );
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             if (message.TryCount > 0)
             {
