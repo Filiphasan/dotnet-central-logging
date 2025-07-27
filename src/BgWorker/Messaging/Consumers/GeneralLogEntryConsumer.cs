@@ -8,7 +8,7 @@ namespace BgWorker.Messaging.Consumers;
 
 public class GeneralLogEntryConsumer(ILogEntryWarehouseService logEntryWarehouse) : IConsumerBase<LogEntryModel>
 {
-    public int ConsumerCount { get; } = 5;
+    public int ConsumerCount => 50;
 
     public ConsumeInfoModel GetConsumeInfo()
     {
