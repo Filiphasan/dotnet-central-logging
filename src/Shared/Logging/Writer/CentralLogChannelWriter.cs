@@ -15,7 +15,7 @@ public class CentralLogChannelWriter
     public CentralLogChannelWriter(IPublishService publishService)
     {
         _publishService = publishService;
-        var options = new BoundedChannelOptions(10000)
+        var options = new BoundedChannelOptions(20000)
         {
             FullMode = BoundedChannelFullMode.DropWrite,
             SingleReader = false,

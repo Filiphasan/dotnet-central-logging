@@ -4,6 +4,7 @@ using BgWorker.Messaging.Extensions;
 using BgWorker.Models;
 using BgWorker.Services.Implementations;
 using BgWorker.Services.Interfaces;
+using BgWorker.Workers;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using Shared;
@@ -23,7 +24,8 @@ public static class DependencyInjection
                 opt.AddAssembly<GeneralLogEntryConsumer>();
             })
             .AddSingleton<ILogEntryWarehouseService, LogEntryWarehouseService>()
-            .AddElasticServices(elasticOption);
+            .AddElasticServices(elasticOption)
+            .AddHostedService<GeneralLogElasticWorker>();
     }
 
     private static IServiceCollection AddElasticServices(this IServiceCollection services, ElasticsearchSetting elasticOption)

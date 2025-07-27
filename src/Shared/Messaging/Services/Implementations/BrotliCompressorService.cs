@@ -9,8 +9,10 @@ public class BrotliCompressorService(RecyclableMemoryStreamManager recyclableMem
     public async Task<byte[]> CompressAsync(byte[] data, CancellationToken cancellationToken = default)
     {
         await using var memoryStream = recyclableMemoryStreamManager.GetStream();
-        await using var brotli = new BrotliStream(memoryStream, CompressionLevel.Fastest, leaveOpen: true);
-        await brotli.WriteAsync(data, cancellationToken);
+        await using (var brotli = new BrotliStream(memoryStream, CompressionLevel.Fastest, leaveOpen: true))
+        {
+            await brotli.WriteAsync(data, cancellationToken);
+        }
 
         return memoryStream.ToArray();
     }

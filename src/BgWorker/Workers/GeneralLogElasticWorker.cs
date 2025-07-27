@@ -11,14 +11,14 @@ public class GeneralLogElasticWorker(ILogEntryWarehouseService logEntryWarehouse
 
     private const int TriggerSize = 50;
     private const int TriggerDelay = 2 * 1000;
-    private readonly DateTime _lastTriggerDate = DateTime.UtcNow;
+    private DateTime _lastTriggerDate = DateTime.UtcNow;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (await _timer.WaitForNextTickAsync(stoppingToken))
         {
             using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
+            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(30));
             var cancellationToken = cancellationTokenSource.Token;
             try
             {
@@ -30,17 +30,22 @@ public class GeneralLogElasticWorker(ILogEntryWarehouseService logEntryWarehouse
                     {
                         try
                         {
-                            await elasticService.BulkAsync(new ElasticBulkModel<EcsLogEntryModel>
+                            var failed = await elasticService.BulkAsync(new ElasticBulkModel<EcsLogEntryModel>
                             {
                                 Index = $"{entries.LogKey.ToLower()}-logs-{DateTime.UtcNow:yyyy-MM-dd}",
                                 List = entries.LogEntries.ToList()
                             }, ct);
+
+                            // TODO: Save failed list to file or another warehouse
                         }
                         catch (Exception ex)
                         {
+                            // TODO: Save failed list to file or another warehouse
                             logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
                         }
                     });
+
+                    _lastTriggerDate = DateTime.UtcNow;
                 }
             }
             catch (Exception ex)

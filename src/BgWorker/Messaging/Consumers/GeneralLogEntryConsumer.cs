@@ -8,7 +8,7 @@ namespace BgWorker.Messaging.Consumers;
 
 public class GeneralLogEntryConsumer(ILogEntryWarehouseService logEntryWarehouse) : IConsumerBase<LogEntryModel>
 {
-    public int ConsumerCount => 50;
+    public int ConsumerCount => 5;
 
     public ConsumeInfoModel GetConsumeInfo()
     {
@@ -27,15 +27,15 @@ public class GeneralLogEntryConsumer(ILogEntryWarehouseService logEntryWarehouse
             Message =
             {
                 Decompress = true,
-                Timeout = TimeSpan.FromSeconds(5),
+                Timeout = TimeSpan.FromSeconds(30),
                 SerializerOptions = LogEntryHelper.GetNonIntendOption,
             }
         };
     }
 
-    public Task<ConsumeResult> ConsumeAsync(LogEntryModel model, CancellationToken cancellationToken = default)
+    public async Task<ConsumeResult> ConsumeAsync(LogEntryModel model, CancellationToken cancellationToken = default)
     {
         logEntryWarehouse.AddLogEntry(model);
-        return Task.FromResult(ConsumeResult.Done);
+        return await Task.FromResult(ConsumeResult.Done);
     }
 }
