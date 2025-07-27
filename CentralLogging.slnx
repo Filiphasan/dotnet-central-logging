@@ -7,4 +7,8 @@
     <Project Path="src\Shared\Shared.csproj" Type="Classic C#" />
     <Project Path="src\Web\Web.csproj" Type="Classic C#" />
   </Folder>
+  <Folder Name="/test/" />
+  <Folder Name="/test/loadTest/">
+    <File Path="test\loadTest\progressive_load_test.js" />
+  </Folder>
 </Solution>

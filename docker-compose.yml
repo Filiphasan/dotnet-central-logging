@@ -40,8 +40,8 @@ services:
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - ELASTICSEARCH_SERVICEACCOUNTTOKEN=AAEAAWVsYXN0aWMva2liYW5hL2tpYmFuYS1kb2NrZXItdG9rZW46WFdqT1AtcDVTX2FkMWdDRjZlUmNEdw
-#      - ELASTICSEARCH_USERNAME=elastic
-#      - ELASTICSEARCH_PASSWORD=vaFaL0kmRriXjK8t2AUrMAOGr3aG1veU
+    #      - ELASTICSEARCH_USERNAME=elastic
+    #      - ELASTICSEARCH_PASSWORD=vaFaL0kmRriXjK8t2AUrMAOGr3aG1veU
     ports:
       - "5601:5601"
     depends_on:

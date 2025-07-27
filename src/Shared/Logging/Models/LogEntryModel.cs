@@ -32,12 +32,14 @@ public static class LogEntryHelper
     private static readonly Lazy<JsonSerializerOptions> IntendOptionLazy = new(() => new JsonSerializerOptions
     {
         WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         TypeInfoResolver = LogEntryModelJsonContext.Default
     });
 
     private static readonly Lazy<JsonSerializerOptions> NonIntendOptionLazy = new(() => new JsonSerializerOptions
     {
         WriteIndented = false,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         TypeInfoResolver = LogEntryModelJsonContext.Default
     });
 

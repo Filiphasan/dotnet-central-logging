@@ -3,12 +3,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Loggers;
 using Shared.Logging.Models.ConsoleBeautify;
+using Shared.Logging.Writer;
 
 namespace Shared.Logging.Providers;
 
 [UnsupportedOSPlatform("browser")]
 [ProviderAlias("ConsoleBeautify")]
-public sealed class ConsoleBeautifyLoggerProvider(IConfiguration? configuration = null, Action<ConsoleBeautifyLoggerConfiguration>? configure = null)
+public sealed class ConsoleBeautifyLoggerProvider(IConfiguration configuration, ConsoleBeautifyLoggerConfiguration config, ConsoleBeautifyChannelWriter consoleBeautifyChannelWriter)
     : ILoggerProvider
 {
     public void Dispose()
@@ -18,13 +19,8 @@ public sealed class ConsoleBeautifyLoggerProvider(IConfiguration? configuration 
 
     public ILogger CreateLogger(string categoryName)
     {
-        if (configuration is null && configure is null)
-        {
-            throw new InvalidOperationException("Either configuration or configure must be provided.");
-        }
-
-        return configure is null
-            ? new ConsoleBeautifyLogger(categoryName, configuration!)
-            : new ConsoleBeautifyLogger(categoryName, configure);
+        return !config.IsConfigured
+            ? new ConsoleBeautifyLogger(categoryName, configuration, consoleBeautifyChannelWriter)
+            : new ConsoleBeautifyLogger(categoryName, config, consoleBeautifyChannelWriter);
     }
 }

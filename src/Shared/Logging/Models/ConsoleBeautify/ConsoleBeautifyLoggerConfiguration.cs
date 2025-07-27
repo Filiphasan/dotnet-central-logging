@@ -5,6 +5,7 @@ namespace Shared.Logging.Models.ConsoleBeautify;
 
 public class ConsoleBeautifyLoggerConfiguration
 {
+    public bool IsConfigured { get; set; }
     public bool JsonFormatEnabled { get; private set; }
     public Dictionary<string, string> Enrichers { get; } = new();
     public Dictionary<string, LogLevel> LogLevels { get; } = new();

@@ -9,7 +9,7 @@ builder.Configuration
 
 builder.Logging
     .ClearProviders()
-    .AddConsoleBeautifyLogger(builder.Configuration);
+    .AddConsoleBeautifyLogger(builder.Services, builder.Configuration);
 
 builder.Services.AddBgWorker(builder.Configuration);
 

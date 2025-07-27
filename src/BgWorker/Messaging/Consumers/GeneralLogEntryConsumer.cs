@@ -22,7 +22,7 @@ public class GeneralLogEntryConsumer(ILogEntryWarehouseService logEntryWarehouse
             {
                 Name = "central-logs-exchange",
                 ExchangeType = ExchangeType.Topic,
-                RoutingKey = "project-*-general",
+                RoutingKey = "project.*.general",
             },
             Message =
             {

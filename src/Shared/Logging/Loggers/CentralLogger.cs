@@ -43,6 +43,11 @@ public sealed class CentralLogger : ILogger
 
     public bool IsEnabled(LogLevel logLevel)
     {
+        if (logLevel is LogLevel.None)
+        {
+            return false;
+        }
+
         if (_categoryLogLevels.TryGetValue(_categoryName, out var categoryLevel))
         {
             return logLevel >= categoryLevel;
@@ -90,7 +95,7 @@ public sealed class CentralLogger : ILogger
                         Name = _exchangeName,
                         Type = ExchangeType.Topic,
                     },
-                    RoutingKey = $"project-{logEntry.LogKey.ToLower()}-{rkEnding}",
+                    RoutingKey = $"project.{logEntry.LogKey.ToLower()}.{rkEnding}",
                     TryCount = 5,
                 };
                 await _publishService.PublishAsync(publishMessageModel, cToken);

@@ -11,7 +11,7 @@ builder.Configuration
 
 builder.Logging.ClearProviders()
     // .AddConsoleBeautifyLogger(builder.Configuration)
-    .AddConsoleBeautifyLogger(options =>
+    .AddConsoleBeautifyLogger(builder.Services, options =>
     {
         options
             .AddEnricher("Application", builder.Environment.ApplicationName)
@@ -27,7 +27,7 @@ builder.Services.AddShared(builder.Configuration)
 
 builder.Logging.AddCentralLogger(builder.Services, options =>
 {
-    options.SetLogKey("web-api")
+    options.SetLogKey("webapi")
         .SetExchangeName("central-logs-exchange")
         .AddEnricher("Application", builder.Environment.ApplicationName)
         .AddEnricher("Environment", builder.Environment.EnvironmentName)
@@ -41,7 +41,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference(opt =>
+    app.MapScalarApiReference("doc/scalar", opt =>
     {
         opt.WithTitle("Logging")
             .WithDarkMode()

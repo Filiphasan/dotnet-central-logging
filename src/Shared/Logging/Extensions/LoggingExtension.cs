@@ -1,31 +1,49 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Models.Central;
 using Shared.Logging.Models.ConsoleBeautify;
 using Shared.Logging.Providers;
+using Shared.Logging.Writer;
 using Shared.Messaging.Services.Interfaces;
 
 namespace Shared.Logging.Extensions;
 
 public static class LoggingExtension
 {
-    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, IConfiguration configuration)
+    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, IServiceCollection services, IConfiguration configuration)
     {
-        builder.AddProvider(new ConsoleBeautifyLoggerProvider(configuration));
+        var logConfig = new ConsoleBeautifyLoggerConfiguration();
+        services.AddSingleton(logConfig);
+        services.AddSingleton<ConsoleBeautifyChannelWriter>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleBeautifyLoggerProvider>());
+        // builder.AddProvider(new ConsoleBeautifyLoggerProvider(configuration));
         return builder;
     }
 
-    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, Action<ConsoleBeautifyLoggerConfiguration> configure)
+    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, IServiceCollection services, Action<ConsoleBeautifyLoggerConfiguration> configure)
     {
-        builder.AddProvider(new ConsoleBeautifyLoggerProvider(null, configure));
+        var logConfig = new ConsoleBeautifyLoggerConfiguration();
+        configure(logConfig);
+        logConfig.IsConfigured = true;
+        services.AddSingleton(logConfig);
+        services.AddSingleton<ConsoleBeautifyChannelWriter>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleBeautifyLoggerProvider>());
+        // builder.AddProvider(new ConsoleBeautifyLoggerProvider(null, configure));
         return builder;
     }
 
     public static ILoggingBuilder AddCentralLogger(this ILoggingBuilder builder, IServiceCollection services, Action<CentralLoggerConfiguration> configure)
     {
+        var config = new CentralLoggerConfiguration();
+        configure(config);
+        services.AddSingleton(config);
+        
         var publishService = services.BuildServiceProvider().GetRequiredService<IPublishService>();
         builder.AddProvider(new CentralLoggerProvider(publishService, configure));
+        
+        // services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, CentralLoggerProvider>());
         return builder;
     }
 }
