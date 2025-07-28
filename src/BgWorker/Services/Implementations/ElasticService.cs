@@ -43,7 +43,7 @@ public class ElasticService(ElasticsearchClient client, ILogger<ElasticService> 
         if (!response.IsValidResponse)
         {
             logger.LogWarning("{MethodName} BulkAsync failed, Status: {Status} Error: {Error}",
-                MethodName, response.ElasticsearchServerError?.Status, response.ElasticsearchServerError?.Error?.Reason);
+                MethodName, response.ElasticsearchServerError?.Status, response.ElasticsearchServerError?.Error.Reason);
         }
 
         return response.ItemsWithErrors

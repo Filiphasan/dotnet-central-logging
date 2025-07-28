@@ -24,8 +24,10 @@ public static class DependencyInjection
                 opt.AddAssembly<GeneralLogEntryConsumer>();
             })
             .AddSingleton<ILogEntryWarehouseService, LogEntryWarehouseService>()
+            .AddSingleton<IFailedEcsLogEntryWarehouseService, FailedEcsLogEntryWarehouseService>()
             .AddElasticServices(elasticOption)
-            .AddHostedService<GeneralLogElasticWorker>();
+            .AddHostedService<GeneralLogElasticWorker>()
+            .AddHostedService<FailedEcsLogEntryWorker>();
     }
 
     private static IServiceCollection AddElasticServices(this IServiceCollection services, ElasticsearchSetting elasticOption)

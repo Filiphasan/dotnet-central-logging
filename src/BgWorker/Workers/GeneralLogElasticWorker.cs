@@ -4,10 +4,14 @@ using BgWorker.Services.Interfaces;
 
 namespace BgWorker.Workers;
 
-public class GeneralLogElasticWorker(ILogEntryWarehouseService logEntryWarehouseService, IElasticService elasticService, ILogger<GeneralLogElasticWorker> logger) : BackgroundService
+public class GeneralLogElasticWorker(
+    ILogEntryWarehouseService logEntryWarehouseService,
+    IFailedEcsLogEntryWarehouseService failedEcsLogEntryWarehouseService,
+    IElasticService elasticService,
+    ILogger<GeneralLogElasticWorker> logger) : BackgroundService
 {
     private const string MethodName = nameof(GeneralLogElasticWorker);
-    private readonly PeriodicTimer _timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+    private readonly PeriodicTimer _timer = new(TimeSpan.FromMilliseconds(100));
 
     private const int TriggerSize = 50;
     private const int TriggerDelay = 2 * 1000;
@@ -25,7 +29,7 @@ public class GeneralLogElasticWorker(ILogEntryWarehouseService logEntryWarehouse
                 if (logEntryWarehouseService.Count() >= TriggerSize || DateTime.UtcNow.Subtract(_lastTriggerDate).TotalMilliseconds >= TriggerDelay)
                 {
                     var list = GetEcsEntries();
-                    var options = new ParallelOptions { MaxDegreeOfParallelism = 20, CancellationToken = cancellationToken };
+                    var options = new ParallelOptions { MaxDegreeOfParallelism = 10, CancellationToken = cancellationToken };
                     await Parallel.ForEachAsync(list, options, async (entries, ct) =>
                     {
                         try
@@ -36,11 +40,11 @@ public class GeneralLogElasticWorker(ILogEntryWarehouseService logEntryWarehouse
                                 List = entries.LogEntries.ToList()
                             }, ct);
 
-                            // TODO: Save failed list to file or another warehouse
+                            failedEcsLogEntryWarehouseService.AddLogEntries(failed);
                         }
                         catch (Exception ex)
                         {
-                            // TODO: Save failed list to file or another warehouse
+                            failedEcsLogEntryWarehouseService.AddLogEntries(entries.LogEntries);
                             logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
                         }
                     });
