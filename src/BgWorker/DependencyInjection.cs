@@ -32,7 +32,9 @@ public static class DependencyInjection
 
     private static IServiceCollection AddElasticServices(this IServiceCollection services, ElasticsearchSetting elasticOption)
     {
-        var settings = new ElasticsearchClientSettings(new Uri(elasticOption.Host));
+        var settings = new ElasticsearchClientSettings(new Uri(elasticOption.Host))
+            .RequestTimeout(TimeSpan.FromSeconds(60));
+
         if (elasticOption.Id != "")
         {
             var key = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{elasticOption.Id}:{elasticOption.Password}"));

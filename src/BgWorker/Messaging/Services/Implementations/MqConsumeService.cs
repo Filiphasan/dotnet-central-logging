@@ -24,19 +24,21 @@ public class MqConsumeService(IChannelPoolService channelPool, IServiceScopeFact
         var consumer = await GetConsumerAsync(channel, cancellationToken);
         consumer.ReceivedAsync += async (_, ea) =>
         {
-            var mesaageToken = GetMessageToken(consumeInfo, cancellationToken);
+            using var messageTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            messageTokenSource.CancelAfter(consumeInfo.Message.Timeout);
+            var messageToken = messageTokenSource.Token;
 
             try
             {
-                var message = await GetMessageAsync<TModel>(ea, consumeInfo, mesaageToken);
+                var message = await GetMessageAsync<TModel>(ea, consumeInfo, messageToken);
                 if (message is null)
                 {
-                    await channel.BasicAckAsync(ea.DeliveryTag, false, mesaageToken);
+                    await channel.BasicAckAsync(ea.DeliveryTag, false, messageToken);
                     return;
                 }
 
-                var result = await consume.ConsumeAsync(message, mesaageToken);
-                await HandleConsumeResultAsync(ea, result, channel, mesaageToken);
+                var result = await consume.ConsumeAsync(message, messageToken);
+                await HandleConsumeResultAsync(ea, result, channel, messageToken);
             }
             catch (OperationCanceledException)
             {
@@ -46,7 +48,7 @@ public class MqConsumeService(IChannelPoolService channelPool, IServiceScopeFact
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error consuming message");
-                await channel.BasicRejectAsync(ea.DeliveryTag, false, mesaageToken);
+                await channel.BasicRejectAsync(ea.DeliveryTag, false, messageToken);
             }
         };
 
@@ -68,19 +70,21 @@ public class MqConsumeService(IChannelPoolService channelPool, IServiceScopeFact
         var consumer = await GetConsumerAsync(channel, cancellationToken);
         consumer.ReceivedAsync += async (_, ea) =>
         {
-            var mesaageToken = GetMessageToken(consumeInfo, cancellationToken);
+            using var messageTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            messageTokenSource.CancelAfter(consumeInfo.Message.Timeout);
+            var messageToken = messageTokenSource.Token;
 
             try
             {
-                var message = await GetMessageAsync<TModel>(ea, consumeInfo, mesaageToken);
+                var message = await GetMessageAsync<TModel>(ea, consumeInfo, messageToken);
                 if (message is null)
                 {
-                    await channel.BasicAckAsync(ea.DeliveryTag, false, mesaageToken);
+                    await channel.BasicAckAsync(ea.DeliveryTag, false, messageToken);
                     return;
                 }
 
-                var result = await consume.Invoke(message, mesaageToken);
-                await HandleConsumeResultAsync(ea, result, channel, mesaageToken);
+                var result = await consume.Invoke(message, messageToken);
+                await HandleConsumeResultAsync(ea, result, channel, messageToken);
             }
             catch (OperationCanceledException)
             {
@@ -90,7 +94,7 @@ public class MqConsumeService(IChannelPoolService channelPool, IServiceScopeFact
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error consuming message");
-                await channel.BasicRejectAsync(ea.DeliveryTag, false, mesaageToken);
+                await channel.BasicRejectAsync(ea.DeliveryTag, false, messageToken);
             }
         };
 
@@ -112,20 +116,22 @@ public class MqConsumeService(IChannelPoolService channelPool, IServiceScopeFact
         var consumer = await GetConsumerAsync(channel, cancellationToken);
         consumer.ReceivedAsync += async (_, ea) =>
         {
-            var mesaageToken = GetMessageToken(consumeInfo, cancellationToken);
+            using var messageTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            messageTokenSource.CancelAfter(consumeInfo.Message.Timeout);
+            var messageToken = messageTokenSource.Token;
 
             try
             {
-                var message = await GetMessageAsync<TModel>(ea, consumeInfo, mesaageToken);
+                var message = await GetMessageAsync<TModel>(ea, consumeInfo, messageToken);
                 if (message is null)
                 {
-                    await channel.BasicAckAsync(ea.DeliveryTag, false, mesaageToken);
+                    await channel.BasicAckAsync(ea.DeliveryTag, false, messageToken);
                     return;
                 }
 
                 await using var scope = serviceScopeFactory.CreateAsyncScope();
-                var result = await consume.Invoke(message, scope, mesaageToken);
-                await HandleConsumeResultAsync(ea, result, channel, mesaageToken);
+                var result = await consume.Invoke(message, scope, messageToken);
+                await HandleConsumeResultAsync(ea, result, channel, messageToken);
             }
             catch (OperationCanceledException)
             {
@@ -135,7 +141,7 @@ public class MqConsumeService(IChannelPoolService channelPool, IServiceScopeFact
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error consuming message");
-                await channel.BasicRejectAsync(ea.DeliveryTag, false, mesaageToken);
+                await channel.BasicRejectAsync(ea.DeliveryTag, false, messageToken);
             }
         };
 
@@ -201,15 +207,6 @@ public class MqConsumeService(IChannelPoolService channelPool, IServiceScopeFact
         };
 
         return Task.FromResult(consumer);
-    }
-
-    private static CancellationToken GetMessageToken(ConsumeInfoModel consumeInfo, CancellationToken cancellationToken)
-    {
-        var messageTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        messageTokenSource.CancelAfter(consumeInfo.Message.Timeout);
-
-        var messageToken = messageTokenSource.Token;
-        return messageToken;
     }
 
     private async Task<TModel?> GetMessageAsync<TModel>(BasicDeliverEventArgs ea, ConsumeInfoModel consumeInfo, CancellationToken cancellationToken = default) where TModel : class

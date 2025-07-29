@@ -33,8 +33,15 @@ public class GeneralLogEntryConsumer(ILogEntryWarehouseService logEntryWarehouse
         };
     }
 
+    private const int WarehouseLimit = 40_000;
+
     public async Task<ConsumeResult> ConsumeAsync(LogEntryModel model, CancellationToken cancellationToken = default)
     {
+        if (logEntryWarehouse.Count() >= WarehouseLimit)
+        {
+            await Task.Delay(100, cancellationToken);
+        }
+
         logEntryWarehouse.AddLogEntry(model);
         return await Task.FromResult(ConsumeResult.Done);
     }

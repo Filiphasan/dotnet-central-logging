@@ -13,7 +13,7 @@ public class GeneralLogElasticWorker(
     private const string MethodName = nameof(GeneralLogElasticWorker);
     private readonly PeriodicTimer _timer = new(TimeSpan.FromMilliseconds(100));
 
-    private const int TriggerSize = 50;
+    private const int TriggerSize = 10_000;
     private const int TriggerDelay = 2 * 1000;
     private DateTime _lastTriggerDate = DateTime.UtcNow;
 
@@ -21,30 +21,28 @@ public class GeneralLogElasticWorker(
     {
         while (await _timer.WaitForNextTickAsync(stoppingToken))
         {
-            using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(30));
-            var cancellationToken = cancellationTokenSource.Token;
             try
             {
-                if (logEntryWarehouseService.Count() >= TriggerSize || DateTime.UtcNow.Subtract(_lastTriggerDate).TotalMilliseconds >= TriggerDelay)
+                if (logEntryWarehouseService.Count() < TriggerSize && !(DateTime.UtcNow.Subtract(_lastTriggerDate).TotalMilliseconds >= TriggerDelay))
                 {
-                    var list = GetEcsEntries();
-                    var options = new ParallelOptions { MaxDegreeOfParallelism = 10, CancellationToken = cancellationToken };
-                    await Parallel.ForEachAsync(list, options, async (entries, ct) =>
-                    {
-                        try
-                        {
-                            await WriteToElasticAsync(entries, ct);
-                        }
-                        catch (Exception ex)
-                        {
-                            failedEcsLogEntryWarehouseService.AddLogEntries(entries.LogEntries);
-                            logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
-                        }
-                    });
-
-                    _lastTriggerDate = DateTime.UtcNow;
+                    continue;
                 }
+
+                var list = GetEcsEntries();
+                foreach (var entries in list)
+                {
+                    try
+                    {
+                        await WriteToElasticAsync(entries, stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        failedEcsLogEntryWarehouseService.AddLogEntries(entries.LogEntries);
+                        logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
+                    }
+                }
+
+                _lastTriggerDate = DateTime.UtcNow;
             }
             catch (Exception ex)
             {
@@ -64,13 +62,27 @@ public class GeneralLogElasticWorker(
 
     private async Task WriteToElasticAsync(EcsLogEntryByLogKeyRecord record, CancellationToken cancellationToken)
     {
-        var failed = await elasticService.BulkAsync(new ElasticBulkModel<EcsLogEntryModel>
+        var indexName = $"{record.LogKey.ToLower()}-logs-{DateTime.UtcNow:yyyy-MM-dd}";
+        var chunkedList = record.LogEntries.Chunk(TriggerSize);
+        foreach (var chunk in chunkedList)
         {
-            Index = $"{record.LogKey.ToLower()}-logs-{DateTime.UtcNow:yyyy-MM-dd}",
-            List = record.LogEntries.ToList()
-        }, cancellationToken);
+            try
+            {
+                var failed = await elasticService.BulkAsync(new ElasticBulkModel<EcsLogEntryModel>
+                {
+                    Index = indexName,
+                    List = record.LogEntries.ToList()
+                }, cancellationToken);
 
-        failedEcsLogEntryWarehouseService.AddLogEntries(failed);
+                failedEcsLogEntryWarehouseService.AddLogEntries(failed);
+            }
+            catch (Exception ex)
+            {
+                failedEcsLogEntryWarehouseService.AddLogEntries(chunk);
+                logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
+            }
+        }
+
     }
 }
 
