@@ -10,9 +10,13 @@ public class FailedEcsLogEntryWorker(
 ) : BackgroundService
 {
     private const string MethodName = nameof(GeneralLogElasticWorker);
-    private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(1));
+    private readonly PeriodicTimer _timer = new(TimeSpan.FromMilliseconds(100));
     private StreamWriter? _streamWriter;
     private DateTime _writerDate = DateTime.UtcNow; 
+
+    private const int TriggerSize = 50;
+    private const int TriggerDelay = 60 * 1000;
+    private DateTime _lastTriggerDate = DateTime.UtcNow;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -20,7 +24,20 @@ public class FailedEcsLogEntryWorker(
         {
             try
             {
+                var count = failedEcsLogEntryWarehouseService.Count();
+                if (count < TriggerSize && DateTime.UtcNow.Subtract(_lastTriggerDate).TotalMilliseconds < TriggerDelay)
+                {
+                    continue;
+                }
+
+                _lastTriggerDate = DateTime.UtcNow;
+
                 await CheckStreamWriterAsync();
+                if (_streamWriter is null)
+                {
+                    logger.LogCritical("{MethodName} StreamWriter is null", MethodName);
+                    continue;
+                }
 
                 var failedList = failedEcsLogEntryWarehouseService.DrainList();
                 failedList = failedList.OrderBy(x => x.Timestamp).ToList();
@@ -35,7 +52,7 @@ public class FailedEcsLogEntryWorker(
                     stringBuilder.AppendLine(JsonSerializer.Serialize(ecsLogEntryModel));
                 }
 
-                await _streamWriter!.WriteAsync(stringBuilder, stoppingToken);
+                await _streamWriter.WriteAsync(stringBuilder, stoppingToken);
             }
             catch (Exception ex)
             {
@@ -57,8 +74,8 @@ public class FailedEcsLogEntryWorker(
         }
 
         var utcNow = DateTime.UtcNow;
-        var folderPath = Path.Combine(AppContext.BaseDirectory, "FailedLogs", utcNow.Year.ToString(), utcNow.Month.ToString(), utcNow.Day.ToString());
-        var filePath = Path.Combine(folderPath, "failed-ecs-logs.json");
+        var folderPath = Path.Combine(AppContext.BaseDirectory, "FailedEcsLogs");
+        var filePath = Path.Combine(folderPath, $"failed-ecs-logs-{utcNow:yyyyMMdd}.log");
         Directory.CreateDirectory(folderPath);
 
         _streamWriter = new StreamWriter(filePath, append: true, Encoding.UTF8) { AutoFlush = true };

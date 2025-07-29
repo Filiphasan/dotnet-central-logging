@@ -34,13 +34,7 @@ public class GeneralLogElasticWorker(
                     {
                         try
                         {
-                            var failed = await elasticService.BulkAsync(new ElasticBulkModel<EcsLogEntryModel>
-                            {
-                                Index = $"{entries.LogKey.ToLower()}-logs-{DateTime.UtcNow:yyyy-MM-dd}",
-                                List = entries.LogEntries.ToList()
-                            }, ct);
-
-                            failedEcsLogEntryWarehouseService.AddLogEntries(failed);
+                            await WriteToElasticAsync(entries, ct);
                         }
                         catch (Exception ex)
                         {
@@ -66,6 +60,17 @@ public class GeneralLogElasticWorker(
             .GroupBy(x => x.LogKey)
             .Select(x => new EcsLogEntryByLogKeyRecord(x.Key, x.Select(EcsLogEntryHelper.LogEntryToEcs).ToArray()))
             .ToArray();
+    }
+
+    private async Task WriteToElasticAsync(EcsLogEntryByLogKeyRecord record, CancellationToken cancellationToken)
+    {
+        var failed = await elasticService.BulkAsync(new ElasticBulkModel<EcsLogEntryModel>
+        {
+            Index = $"{record.LogKey.ToLower()}-logs-{DateTime.UtcNow:yyyy-MM-dd}",
+            List = record.LogEntries.ToList()
+        }, cancellationToken);
+
+        failedEcsLogEntryWarehouseService.AddLogEntries(failed);
     }
 }
 
