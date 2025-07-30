@@ -6,7 +6,6 @@ using Shared.Logging.Models.Central;
 using Shared.Logging.Models.ConsoleBeautify;
 using Shared.Logging.Providers;
 using Shared.Logging.Writer;
-using Shared.Messaging.Services.Interfaces;
 
 namespace Shared.Logging.Extensions;
 
