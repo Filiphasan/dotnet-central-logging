@@ -7,6 +7,7 @@ namespace BgWorker.Workers;
 public class GeneralLogElasticWorker(
     ILogEntryWarehouseService logEntryWarehouseService,
     IFailedEcsLogEntryWarehouseService failedEcsLogEntryWarehouseService,
+    IEcsLogEntryMemEstimateService memEstimateService,
     IElasticService elasticService,
     ILogger<GeneralLogElasticWorker> logger) : BackgroundService
 {
@@ -62,8 +63,12 @@ public class GeneralLogElasticWorker(
 
     private async Task WriteToElasticAsync(EcsLogEntryByLogKeyRecord record, CancellationToken cancellationToken)
     {
-        var indexName = $"{record.LogKey.ToLower()}-logs-{DateTime.UtcNow:yyyy-MM-dd}";
-        var chunkedList = record.LogEntries.Chunk(TriggerSize);
+        var logKey = record.LogKey.ToLower();
+        memEstimateService.CalculateBytes(logKey, record.LogEntries.First());
+
+        var chunkSize = memEstimateService.GetAvgBulkApiRequestItemSize(logKey);
+        var indexName = $"{logKey}-logs-{DateTime.UtcNow:yyyy-MM-dd}";
+        var chunkedList = record.LogEntries.Chunk(chunkSize);
         foreach (var chunk in chunkedList)
         {
             try

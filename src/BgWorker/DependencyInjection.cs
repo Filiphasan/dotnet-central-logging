@@ -25,6 +25,7 @@ public static class DependencyInjection
             })
             .AddSingleton<ILogEntryWarehouseService, LogEntryWarehouseService>()
             .AddSingleton<IFailedEcsLogEntryWarehouseService, FailedEcsLogEntryWarehouseService>()
+            .AddSingleton<IEcsLogEntryMemEstimateService, EcsLogEntryMemEstimateService>()
             .AddElasticServices(elasticOption)
             .AddHostedService<GeneralLogElasticWorker>()
             .AddHostedService<FailedEcsLogEntryWorker>();
