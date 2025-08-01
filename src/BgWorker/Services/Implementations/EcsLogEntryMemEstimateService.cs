@@ -8,7 +8,7 @@ namespace BgWorker.Services.Implementations;
 
 public class EcsLogEntryMemEstimateService : IEcsLogEntryMemEstimateService
 {
-    private const int EcsExpectedByteSize = 10 * 1024 * 1024;
+    private const int EcsExpectedByteSize = 15 * 1024 * 1024; // 15MB
 
     private readonly ConcurrentDictionary<string, EcsLogEntryAnalyzDataModel> _calculatedList = new();
 
@@ -34,16 +34,16 @@ public class EcsLogEntryMemEstimateService : IEcsLogEntryMemEstimateService
 
 public sealed class EcsLogEntryAnalyzDataModel
 {
-    public int AnalyzedCount { get; private set; }
+    private int AnalyzedCount { get; set; }
     public int AvgByteSize { get; private set; }
-    public int MaxByteSize { get; private set; }
-    public int MinByteSize { get; private set; }
+    private int MaxByteSize { get; set; }
+    private int MinByteSize { get; set; }
 
     public void CalcByteSizes(int bytes)
     {
+        AnalyzedCount++;
         AvgByteSize = (AvgByteSize * AnalyzedCount + bytes) / AnalyzedCount;
         MaxByteSize = Math.Max(MaxByteSize, bytes);
         MinByteSize = Math.Min(MinByteSize, bytes);
-        AnalyzedCount++;
     }
 }

@@ -14,8 +14,8 @@ public class GeneralLogElasticWorker(
     private const string MethodName = nameof(GeneralLogElasticWorker);
     private readonly PeriodicTimer _timer = new(TimeSpan.FromMilliseconds(100));
 
-    private const int TriggerSize = 10_000;
-    private const int TriggerDelay = 2 * 1000;
+    private const int ExprectedSize = 1_000;
+    private const int ExpectedTime = 2_000;
     private DateTime _lastTriggerDate = DateTime.UtcNow;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -24,24 +24,22 @@ public class GeneralLogElasticWorker(
         {
             try
             {
-                if (logEntryWarehouseService.Count() < TriggerSize && !(DateTime.UtcNow.Subtract(_lastTriggerDate).TotalMilliseconds >= TriggerDelay))
+                if (logEntryWarehouseService.Count() < ExprectedSize && DateTime.UtcNow.Subtract(_lastTriggerDate).TotalMilliseconds < ExpectedTime)
                 {
                     continue;
                 }
 
                 var list = GetEcsEntries();
-                foreach (var entries in list)
+                if (list.Length == 0)
                 {
-                    try
-                    {
-                        await WriteToElasticAsync(entries, stoppingToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        failedEcsLogEntryWarehouseService.AddLogEntries(entries.LogEntries);
-                        logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
-                    }
+                    continue;
                 }
+
+                var parallelOptions = new ParallelOptions { CancellationToken = stoppingToken, MaxDegreeOfParallelism = 10 };
+                await Parallel.ForEachAsync(list, parallelOptions, async (record, token) =>
+                {
+                    await WriteToElasticAsync(record, token);
+                });
 
                 _lastTriggerDate = DateTime.UtcNow;
             }
@@ -63,31 +61,38 @@ public class GeneralLogElasticWorker(
 
     private async Task WriteToElasticAsync(EcsLogEntryByLogKeyRecord record, CancellationToken cancellationToken)
     {
-        var logKey = record.LogKey.ToLower();
-        memEstimateService.CalculateBytes(logKey, record.LogEntries.First());
-
-        var chunkSize = memEstimateService.GetAvgBulkApiRequestItemSize(logKey);
-        var indexName = $"{logKey}-logs-{DateTime.UtcNow:yyyy-MM-dd}";
-        var chunkedList = record.LogEntries.Chunk(chunkSize);
-        foreach (var chunk in chunkedList)
+        try
         {
-            try
-            {
-                var failed = await elasticService.BulkAsync(new ElasticBulkModel<EcsLogEntryModel>
-                {
-                    Index = indexName,
-                    List = record.LogEntries.ToList()
-                }, cancellationToken);
+            var logKey = record.LogKey.ToLower();
+            memEstimateService.CalculateBytes(logKey, record.LogEntries.First());
 
-                failedEcsLogEntryWarehouseService.AddLogEntries(failed);
-            }
-            catch (Exception ex)
+            var chunkSize = memEstimateService.GetAvgBulkApiRequestItemSize(logKey);
+            var indexName = $"{logKey}-logs-{DateTime.UtcNow:yyyy-MM-dd}";
+            var chunkedList = record.LogEntries.Chunk(chunkSize);
+            foreach (var chunk in chunkedList)
             {
-                failedEcsLogEntryWarehouseService.AddLogEntries(chunk);
-                logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
+                try
+                {
+                    var failed = await elasticService.BulkAsync(new ElasticBulkModel<EcsLogEntryModel>
+                    {
+                        Index = indexName,
+                        List = record.LogEntries.ToList()
+                    }, cancellationToken);
+
+                    failedEcsLogEntryWarehouseService.AddLogEntries(failed);
+                }
+                catch (Exception ex)
+                {
+                    failedEcsLogEntryWarehouseService.AddLogEntries(chunk);
+                    logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
+                }
             }
         }
-
+        catch (Exception ex)
+        {
+            failedEcsLogEntryWarehouseService.AddLogEntries(record.LogEntries);
+            logger.LogError(ex, "{MethodName} on entries Exception: {Message}", MethodName, ex.Message);
+        }
     }
 }
 

@@ -6,7 +6,7 @@ using Shared.Logging.Models;
 
 namespace BgWorker.Messaging.Consumers;
 
-public class GeneralLogEntryConsumer(ILogEntryWarehouseService logEntryWarehouse) : IConsumerBase<LogEntryModel>
+public class GeneralLogEntryConsumer(ILogEntryWarehouseService logEntryWarehouse, IEcsLogEntryMemEstimateService memEstimateService) : IConsumerBase<LogEntryModel>
 {
     public int ConsumerCount => 20;
 
@@ -33,7 +33,7 @@ public class GeneralLogEntryConsumer(ILogEntryWarehouseService logEntryWarehouse
         };
     }
 
-    private const int WarehouseLimit = 40_000;
+    private const int WarehouseLimit = 20_000;
 
     public async Task<ConsumeResult> ConsumeAsync(LogEntryModel model, CancellationToken cancellationToken = default)
     {

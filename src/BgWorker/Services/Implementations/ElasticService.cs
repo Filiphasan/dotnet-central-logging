@@ -40,16 +40,27 @@ public class ElasticService(ElasticsearchClient client, ILogger<ElasticService> 
             }))
         };
         var response = await client.BulkAsync(request, cancellationToken);
-        if (!response.IsValidResponse)
+        if (response.IsValidResponse)
+        {
+            return [];
+        }
+        
+        if (response.ElasticsearchServerError is not null)
         {
             logger.LogWarning("{MethodName} BulkAsync failed, Status: {Status} Error: {Error}",
-                MethodName, response.ElasticsearchServerError?.Status, response.ElasticsearchServerError?.Error.Reason);
+                MethodName, response.ElasticsearchServerError.Status, response.ElasticsearchServerError.Error.ToString());
         }
 
-        return response.ItemsWithErrors
-            .Where(x => !x.IsValid && int.TryParse(x.Index, out _))
-            .Where(x => int.Parse(x.Index) >= 0 && int.Parse(x.Index) < model.List.Count)
-            .Select(x => model.List[int.Parse(x.Index)])
-            .ToList();
+        var failedList = new List<T>();
+        foreach (var item in response.ItemsWithErrors)
+        {
+            var data = model.List.First(x => x.Id == item.Id);
+            failedList.Add(data);
+
+            logger.LogWarning("Bulk operation failed for document ID: {DocumentId} in index: {Index}. Reason: {ErrorReason}",
+                item.Id, item.Index, item.Error?.Reason);
+        }
+
+        return failedList;
     }
 }
