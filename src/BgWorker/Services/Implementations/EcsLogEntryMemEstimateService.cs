@@ -37,7 +37,7 @@ public sealed class EcsLogEntryAnalyzDataModel
     private int AnalyzedCount { get; set; }
     public int AvgByteSize { get; private set; }
     private int MaxByteSize { get; set; }
-    private int MinByteSize { get; set; }
+    private int MinByteSize { get; set; } = int.MaxValue;
 
     public void CalcByteSizes(int bytes)
     {
