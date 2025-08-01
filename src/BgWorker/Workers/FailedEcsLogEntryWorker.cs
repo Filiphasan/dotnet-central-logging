@@ -14,8 +14,9 @@ public class FailedEcsLogEntryWorker(
     private StreamWriter? _streamWriter;
     private DateTime _writerDate = DateTime.UtcNow; 
 
-    private const int TriggerSize = 50;
+    private const int TriggerSize = 100;
     private const int TriggerDelay = 60 * 1000;
+    private const int ChunkSize = 3_000;
     private DateTime _lastTriggerDate = DateTime.UtcNow;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -46,13 +47,17 @@ public class FailedEcsLogEntryWorker(
                     continue;
                 }
 
-                var stringBuilder = new StringBuilder();
-                foreach (var ecsLogEntryModel in failedList)
+                var chunkList = failedList.Chunk(ChunkSize);
+                foreach (var chunk in chunkList)
                 {
-                    stringBuilder.AppendLine(JsonSerializer.Serialize(ecsLogEntryModel));
-                }
+                    var stringBuilder = new StringBuilder();
+                    foreach (var ecsLogEntryModel in chunk)
+                    {
+                        stringBuilder.AppendLine(JsonSerializer.Serialize(ecsLogEntryModel));
+                    }
 
-                await _streamWriter.WriteAsync(stringBuilder, stoppingToken);
+                    await _streamWriter.WriteAsync(stringBuilder, stoppingToken);
+                }
             }
             catch (Exception ex)
             {
@@ -78,7 +83,7 @@ public class FailedEcsLogEntryWorker(
         var filePath = Path.Combine(folderPath, $"failed-ecs-logs-{utcNow:yyyyMMdd}.log");
         Directory.CreateDirectory(folderPath);
 
-        _streamWriter = new StreamWriter(filePath, append: true, Encoding.UTF8) { AutoFlush = true };
+        _streamWriter = new StreamWriter(filePath, append: true, Encoding.UTF8, 64 * 1024) { AutoFlush = true };
         _writerDate = utcNow;
     }
 }
