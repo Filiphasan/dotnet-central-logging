@@ -57,6 +57,7 @@ public class FailedEcsLogEntryWorker(
                     }
 
                     await _streamWriter.WriteAsync(stringBuilder, stoppingToken);
+                    stringBuilder.Clear();
                 }
             }
             catch (Exception ex)
