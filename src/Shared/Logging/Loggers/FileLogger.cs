@@ -1,29 +1,13 @@
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Helpers;
 using Shared.Logging.Models;
-using Shared.Logging.Models.ConsoleBeautify;
+using Shared.Logging.Models.FileLog;
 using Shared.Logging.Writer;
 
 namespace Shared.Logging.Loggers;
 
-public sealed class ConsoleBeautifyLogger(string categoryName, ConsoleBeautifyLoggerConfiguration options, ConsoleBeautifyChannelWriter consoleBeautifyChannelWriter)
-    : ILogger
+public class FileLogger(string categoryName, FileLoggerConfiguration options, FileLogChannelWriter writer) : ILogger
 {
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
-    {
-        return null;
-    }
-
-    public bool IsEnabled(LogLevel logLevel)
-    {
-        if (options.LogLevels.TryGetValue(categoryName, out var categoryLevel))
-        {
-            return logLevel >= categoryLevel;
-        }
-
-        return logLevel >= options.DefaultLogLevel;
-    }
-
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         if (!IsEnabled(logLevel))
@@ -43,9 +27,24 @@ public sealed class ConsoleBeautifyLogger(string categoryName, ConsoleBeautifyLo
             Message = message,
             Exception = LoggerHelper.ExtractExceptionDetail(exception),
             Enrichers = options.Enrichers,
-            Properties = options.JsonFormatEnabled ? LoggerHelper.ExtractProperties(state) : null,
+            Properties = LoggerHelper.ExtractProperties(state),
         };
 
-        consoleBeautifyChannelWriter.Write(logEntry);
+        writer.Write(logEntry);
+    }
+
+    public bool IsEnabled(LogLevel logLevel)
+    {
+        if (options.LogLevels.TryGetValue(categoryName, out var categoryLevel))
+        {
+            return logLevel >= categoryLevel;
+        }
+
+        return logLevel >= options.DefaultLogLevel;
+    }
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    {
+        return null;
     }
 }

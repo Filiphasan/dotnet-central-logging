@@ -5,6 +5,7 @@ using RabbitMQ.Client;
 using Shared.Logging.Helpers;
 using Shared.Logging.Models;
 using Shared.Logging.Models.Central;
+using Shared.Logging.Models.FileLog;
 using Shared.Messaging.Models;
 using Shared.Messaging.Services.Interfaces;
 
@@ -19,11 +20,15 @@ public sealed class CentralLogChannelWriter
     private readonly CentralLogChannelWriterConfiguration _options;
     private static bool _isPublishServiceSet;
 
-    public CentralLogChannelWriter(IServiceProvider serviceProvider, ConsoleBeautifyChannelWriter consoleBeautifyChannelWriter, CentralLogChannelWriterConfiguration options, FileLogChannelWriter fileLogChannelWriter)
+    public CentralLogChannelWriter(IServiceProvider serviceProvider, ConsoleBeautifyChannelWriter consoleBeautifyChannelWriter, CentralLogChannelWriterConfiguration options)
     {
         _consoleBeautifyChannelWriter = consoleBeautifyChannelWriter;
         _options = options;
-        _fileLogChannelWriter = fileLogChannelWriter;
+        _fileLogChannelWriter = new FileLogChannelWriter(new FileLogChannelWriterConfiguration
+        {
+            BaseFolder = "CentralFailedLogs",
+            MaxParallelism = _options.MaxParallelizm,
+        }, consoleBeautifyChannelWriter);
         if (!_isPublishServiceSet)
         {
             _isPublishServiceSet = true;

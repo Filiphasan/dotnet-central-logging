@@ -5,8 +5,10 @@ using Microsoft.Extensions.Logging;
 using Shared.Logging.Helpers;
 using Shared.Logging.Models.Central;
 using Shared.Logging.Models.ConsoleBeautify;
+using Shared.Logging.Models.FileLog;
 using Shared.Logging.Providers;
 using Shared.Logging.Writer;
+using Shared.Messaging.Services.Implementations;
 
 namespace Shared.Logging.Extensions;
 
@@ -29,6 +31,27 @@ public static class LoggingExtension
         services.AddSingleton(writerOptions);
         services.AddSingleton<ConsoleBeautifyChannelWriter>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleBeautifyLoggerProvider>());
+        return builder;
+    }
+
+    public static ILoggingBuilder AddFileLogger(this ILoggingBuilder builder, IServiceCollection services, Action<FileLoggerConfiguration> configure)
+    {
+        var options = new FileLoggerConfiguration();
+        configure(options);
+
+        var writerOptions = new FileLogChannelWriterConfiguration
+        {
+            MaxParallelism = options.MaxParallelism,
+            WriteSize = options.WriteSize,
+            WriteInterval = options.WriteInterval,
+            BaseFolder = options.BaseFolder,
+        };
+
+        services.AddSingleton(options);
+        services.AddSingleton(writerOptions);
+        services.AddSingleton<ConsoleBeautifyChannelWriter>();
+        services.AddSingleton<FileLogChannelWriter>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, FileLoggerProvider>());
         return builder;
     }
 
