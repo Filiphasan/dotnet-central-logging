@@ -6,30 +6,15 @@ using Shared.Logging.Writer;
 
 namespace Shared.Logging.Loggers;
 
-public sealed class CentralLogger : ILogger
+public sealed class CentralLogger(string categoryName, CentralLogChannelWriter centralLogChannelWriter, CentralLoggerConfiguration config)
+    : ILogger
 {
-    private readonly string _categoryName;
-    private readonly CentralLogChannelWriter _centralLogChannelWriter;
-
-    private readonly string _logKey;
-    private readonly bool _isSpecific;
-    private readonly string _exchangeName;
-    private readonly Dictionary<string, string> _enrichers;
-    private readonly Dictionary<string, LogLevel> _categoryLogLevels;
-    private readonly LogLevel _defaultLogLevel;
-
-    public CentralLogger(string categoryName, CentralLogChannelWriter centralLogChannelWriter, CentralLoggerConfiguration config)
-    {
-        _categoryName = categoryName;
-        _centralLogChannelWriter = centralLogChannelWriter;
-
-        _logKey = config.LogKey;
-        _isSpecific = config.IsSpecific;
-        _exchangeName = config.ExchangeName;
-        _enrichers = config.Enrichers;
-        _categoryLogLevels = config.LogLevels;
-        _defaultLogLevel = config.LogLevels.GetValueOrDefault("Default", LogLevel.Information);
-    }
+    private readonly string _logKey = config.LogKey;
+    private readonly bool _isSpecific = config.IsSpecific;
+    private readonly string _exchangeName = config.ExchangeName;
+    private readonly Dictionary<string, string> _enrichers = config.Enrichers;
+    private readonly Dictionary<string, LogLevel> _categoryLogLevels = config.LogLevels;
+    private readonly LogLevel _defaultLogLevel = config.LogLevels.GetValueOrDefault("Default", LogLevel.Information);
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
@@ -43,7 +28,7 @@ public sealed class CentralLogger : ILogger
             return false;
         }
 
-        if (_categoryLogLevels.TryGetValue(_categoryName, out var categoryLevel))
+        if (_categoryLogLevels.TryGetValue(categoryName, out var categoryLevel))
         {
             return logLevel >= categoryLevel;
         }
@@ -64,8 +49,8 @@ public sealed class CentralLogger : ILogger
         {
             LogKey = _logKey,
             Timestamp = DateTime.UtcNow,
-            Level = logLevel.ToString(),
-            Source = _categoryName,
+            Level = LoggerHelper.GetLogLevelString(logLevel),
+            Source = categoryName,
             EventId = eventId.Id,
             EventName = eventId.Name,
             Message = message,
@@ -73,6 +58,6 @@ public sealed class CentralLogger : ILogger
             Exception = LoggerHelper.ExtractExceptionDetail(exception),
             Properties = LoggerHelper.ExtractProperties(state),
         };
-        _centralLogChannelWriter.Write(new CentralLogRecord(_exchangeName, _isSpecific, logEntry));
+        centralLogChannelWriter.Write(logEntry);
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Loggers;
@@ -7,9 +8,11 @@ using Shared.Logging.Writer;
 namespace Shared.Logging.Providers;
 
 [UnsupportedOSPlatform("browser")]
-[ProviderAlias("CentralLogger")]
+[ProviderAlias("CentralLog")]
 public sealed class CentralLoggerProvider(CentralLogChannelWriter centralLogChannelWriter, CentralLoggerConfiguration config) : ILoggerProvider
 {
+    private readonly ConcurrentDictionary<string, CentralLogger> _loggers = new();
+
     public void Dispose()
     {
         // no disposable object
@@ -17,6 +20,6 @@ public sealed class CentralLoggerProvider(CentralLogChannelWriter centralLogChan
 
     public ILogger CreateLogger(string categoryName)
     {
-        return new CentralLogger(categoryName, centralLogChannelWriter, config);
+        return _loggers.GetOrAdd(categoryName, name => new CentralLogger(name, centralLogChannelWriter, config));
     }
 }

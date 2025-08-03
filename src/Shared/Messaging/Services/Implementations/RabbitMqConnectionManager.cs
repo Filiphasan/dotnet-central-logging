@@ -25,7 +25,7 @@ public class RabbitMqConnectionManager : IConnectionManager
 
         _retryPolicy = Policy
             .Handle<Exception>()
-            .WaitAndRetryAsync(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+            .WaitAndRetryAsync(1, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 (exception, timeSpan, _, retryCount) =>
                 {
                     _logger.LogError(exception, "RabbitMQ connection failed, retrying in {TimeOut}ms RetryCount: {RetryCount}", timeSpan.TotalMilliseconds, retryCount);

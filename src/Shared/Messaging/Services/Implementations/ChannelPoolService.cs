@@ -81,7 +81,7 @@ public class ChannelPoolService(IConnectionManager connectionManager, MessagingO
         {
             try
             {
-                await channel.DisposeAsync().ConfigureAwait(false);
+                await channel.DisposeAsync();
             }
             catch (Exception ex)
             {

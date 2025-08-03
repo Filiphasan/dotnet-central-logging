@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Shared.Logging.Helpers;
 using Shared.Logging.Models.Central;
 using Shared.Logging.Models.ConsoleBeautify;
 using Shared.Logging.Providers;
@@ -11,40 +12,56 @@ namespace Shared.Logging.Extensions;
 
 public static class LoggingExtension
 {
-    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, IServiceCollection services, IConfiguration configuration)
+    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, IServiceCollection services, IConfiguration configuration, Action<ConsoleBeautifyLoggerConfiguration> configure)
     {
-        var logConfig = new ConsoleBeautifyLoggerConfiguration();
-        services.AddSingleton(logConfig);
-        services.AddSingleton<ConsoleBeautifyChannelWriter>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleBeautifyLoggerProvider>());
-        // builder.AddProvider(new ConsoleBeautifyLoggerProvider(configuration));
-        return builder;
-    }
+        var options = new ConsoleBeautifyLoggerConfiguration();
+        configure(options);
 
-    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, IServiceCollection services, Action<ConsoleBeautifyLoggerConfiguration> configure)
-    {
-        var logConfig = new ConsoleBeautifyLoggerConfiguration();
-        configure(logConfig);
-        logConfig.IsConfigured = true;
-        services.AddSingleton(logConfig);
+        LoggerHelper.LoadConsoleBeautifyOptionsFromConfiguration(configuration, options);
+
+        var writerOptions = new ConsoleBeautifyChannelWriterConfiguration
+        {
+            JsonFormatEnabled = options.JsonFormatEnabled,
+            LogLevelColors = options.LogLevelColors,
+        };
+
+        services.AddSingleton(options);
+        services.AddSingleton(writerOptions);
         services.AddSingleton<ConsoleBeautifyChannelWriter>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleBeautifyLoggerProvider>());
-        // builder.AddProvider(new ConsoleBeautifyLoggerProvider(null, configure));
         return builder;
     }
 
     public static ILoggingBuilder AddCentralLogger(this ILoggingBuilder builder, IServiceCollection services, Action<CentralLoggerConfiguration> configure)
     {
-        var config = new CentralLoggerConfiguration();
-        configure(config);
-        services.AddSingleton(config);
+        var options = new CentralLoggerConfiguration();
+        configure(options);
+
+        if (options.LogKey.Contains('.'))
+        {
+            throw new ArgumentException("LogKey cannot contain '.'");
+        }
+
+        var writerOptions = new CentralLogChannelWriterConfiguration
+        {
+            ExchangeName = options.ExchangeName,
+            IsSpecific = options.IsSpecific,
+            MaxParallelizm = options.MaxParallelizm
+        };
+        services.AddSingleton(options);
+        services.AddSingleton(writerOptions);
+        services.AddSingleton<ConsoleBeautifyChannelWriter>();
+        services.AddSingleton<FileLogChannelWriter>();
         services.AddSingleton<CentralLogChannelWriter>();
 
-        var centralLogChannelWriter = services.BuildServiceProvider().GetRequiredService<CentralLogChannelWriter>();
-        builder.AddProvider(new CentralLoggerProvider(centralLogChannelWriter, config));
+        // Alttaki kullanım normalde circular dependency hatası oluşturur çünkü
+        // CentralLogChannelWriter içindeki servislerin bazıları ILogger bağımlı bu sorunun çözümü için CentralLogChannelWriter ctor içinde özel bir if eklendi
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, CentralLoggerProvider>());
 
-        // Alttaki kullanım circular dependency hatası oluşturur çünkü CentralLogChannelWriter içindeki servislerin bazıları ILogger bağımlı
-        // services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, CentralLoggerProvider>());
+        // CentralLogChannelWriter içindeki özel çözüm kullanılmak istenmezse bu şekilde kullanılabilir
+        // Ama bu da kendine ait bir CentralLogChannelWriter oluşturur (Genel DI konteynere ait olmayan bir CentralLogChannelWriter)
+        // var centralLogChannelWriter = services.BuildServiceProvider().GetRequiredService<CentralLogChannelWriter>();
+        // builder.AddProvider(new CentralLoggerProvider(centralLogChannelWriter, config));
         return builder;
     }
 }

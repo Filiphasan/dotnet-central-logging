@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Constants;
 using Shared.Logging.Models;
+using Shared.Logging.Models.ConsoleBeautify;
 
 namespace Shared.Logging.Helpers;
 
@@ -56,6 +57,30 @@ public static class LoggerHelper
         return properties;
     }
 
+    public static void LoadConsoleBeautifyOptionsFromConfiguration(IConfiguration configuration, ConsoleBeautifyLoggerConfiguration options)
+    {
+        LoadConsoleBeautifyLogLevelFromConfiguration(configuration, options);
+        LoadConsoleBeautifyLogLevelColorsFromConfiguration(configuration, options);
+    }
+
+    private static void LoadConsoleBeautifyLogLevelFromConfiguration(IConfiguration configuration, ConsoleBeautifyLoggerConfiguration options)
+    {
+        var section = configuration.GetSection("Logging:ConsoleBeautify:LogLevel");
+        foreach (var item in section.GetChildren())
+        {
+            options.LogLevels[item.Key] = GetLogLevel(item.Value);
+        }
+    }
+
+    private static void LoadConsoleBeautifyLogLevelColorsFromConfiguration(IConfiguration configuration, ConsoleBeautifyLoggerConfiguration options)
+    {
+        var section = configuration.GetSection("Logging:ConsoleBeautify:Colors");
+        foreach (var item in section.GetChildren())
+        {
+            SetConsoleColor(options.LogLevelColors, item.Value, GetLogLevel(item.Key));
+        }
+    }
+
     public static Dictionary<LogLevel, ConsoleColor> GetDefaultLogLevelColors()
     {
         return new Dictionary<LogLevel, ConsoleColor>
@@ -70,30 +95,37 @@ public static class LoggerHelper
         };
     }
 
-    public static void LoadEnrichersFromConfiguration(string section, IConfiguration configuration, Dictionary<string, string> enrichers)
+    private static void SetConsoleColor(Dictionary<LogLevel, ConsoleColor> logLevelColors, string? colorString, LogLevel logLevel)
     {
-        var enrichersSection = configuration.GetSection(section);
-        foreach (var item in enrichersSection.GetChildren())
+        if (string.IsNullOrEmpty(colorString))
         {
-            enrichers[item.Key] = item.Value ?? string.Empty;
-        }
-    }
-
-    public static void LoadCategoryLogLevelsFromConfiguration(string section, IConfiguration configuration, Dictionary<string, LogLevel> categoryLogLevels)
-    {
-        var logLevelSection = configuration.GetSection("Logging:LogLevel");
-        foreach (var item in logLevelSection.GetChildren())
-        {
-            if (item.Key != "Default")
-            {
-                categoryLogLevels[item.Key] = GetLogLevel(item.Value);
-            }
+            return;
         }
 
-        var customLevelsSection = configuration.GetSection("Logging:ConsoleBeautify:LogLevel");
-        foreach (var item in customLevelsSection.GetChildren())
+        ConsoleColor? foundedColor = colorString.ToUpper() switch
         {
-            categoryLogLevels[item.Key] = GetLogLevel(item.Value);
+            ConsoleColorConstant.Black => ConsoleColor.Black,
+            ConsoleColorConstant.DarkBlue => ConsoleColor.DarkBlue,
+            ConsoleColorConstant.DarkGreen => ConsoleColor.DarkGreen,
+            ConsoleColorConstant.DarkCyan => ConsoleColor.DarkCyan,
+            ConsoleColorConstant.DarkRed => ConsoleColor.DarkRed,
+            ConsoleColorConstant.DarkMagenta => ConsoleColor.DarkMagenta,
+            ConsoleColorConstant.DarkYellow => ConsoleColor.DarkYellow,
+            ConsoleColorConstant.Gray => ConsoleColor.Gray,
+            ConsoleColorConstant.DarkGray => ConsoleColor.DarkGray,
+            ConsoleColorConstant.Blue => ConsoleColor.Blue,
+            ConsoleColorConstant.Green => ConsoleColor.Green,
+            ConsoleColorConstant.Cyan => ConsoleColor.Cyan,
+            ConsoleColorConstant.Red => ConsoleColor.Red,
+            ConsoleColorConstant.Magenta => ConsoleColor.Magenta,
+            ConsoleColorConstant.Yellow => ConsoleColor.Yellow,
+            ConsoleColorConstant.White => ConsoleColor.White,
+            _ => null
+        };
+
+        if (foundedColor is not null)
+        {
+            logLevelColors[logLevel] = foundedColor.Value;
         }
     }
 
@@ -102,7 +134,7 @@ public static class LoggerHelper
         if (string.IsNullOrEmpty(logLevelString))
             return LogLevel.Information;
 
-        return logLevelString.ToUpper() switch
+        return logLevelString switch
         {
             LogLevelConstant.Trace => LogLevel.Trace,
             LogLevelConstant.Debug => LogLevel.Debug,
@@ -112,6 +144,21 @@ public static class LoggerHelper
             LogLevelConstant.Critical => LogLevel.Critical,
             LogLevelConstant.None => LogLevel.None,
             _ => LogLevel.Information
+        };
+    }
+
+    public static string GetLogLevelString(LogLevel logLevel)
+    {
+        return logLevel switch
+        {
+            LogLevel.Trace => LogLevelConstant.Trace,
+            LogLevel.Debug => LogLevelConstant.Debug,
+            LogLevel.Information => LogLevelConstant.Information,
+            LogLevel.Warning => LogLevelConstant.Warning,
+            LogLevel.Error => LogLevelConstant.Error,
+            LogLevel.Critical => LogLevelConstant.Critical,
+            LogLevel.None => LogLevelConstant.None,
+            _ => LogLevelConstant.Information
         };
     }
 }

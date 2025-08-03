@@ -4,11 +4,12 @@ namespace Shared.Logging.Models.Central;
 
 public class CentralLoggerConfiguration
 {
-    public string LogKey { get; private set; } = string.Empty;
-    public bool IsSpecific { get; private set; }
-    public string ExchangeName { get; set; } = string.Empty;
-    public Dictionary<string, string> Enrichers { get; } = new();
-    public Dictionary<string, LogLevel> LogLevels { get; set; } = new();
+    internal string LogKey { get; private set; } = string.Empty;
+    internal bool IsSpecific { get; private set; }
+    internal string ExchangeName { get; private set; } = string.Empty;
+    internal int MaxParallelizm { get; private set; } = 20;
+    internal Dictionary<string, string> Enrichers { get; } = new();
+    internal Dictionary<string, LogLevel> LogLevels { get; } = new();
 
     public CentralLoggerConfiguration SetLogKey(string logKey)
     {
@@ -25,6 +26,12 @@ public class CentralLoggerConfiguration
     public CentralLoggerConfiguration SetExchangeName(string exchangeName)
     {
         ExchangeName = exchangeName;
+        return this;
+    }
+
+    public CentralLoggerConfiguration SetMaxParallelizm(int channelPoolSize)
+    {
+        MaxParallelizm = channelPoolSize;
         return this;
     }
 

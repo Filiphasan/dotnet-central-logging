@@ -11,10 +11,17 @@ builder.Configuration
     .AddEnvironmentVariables();
 
 builder.Logging.ClearProviders()
-    // .AddConsoleBeautifyLogger(builder.Configuration)
-    .AddConsoleBeautifyLogger(builder.Services, options =>
+    .AddConsoleBeautifyLogger(builder.Services, builder.Configuration, options =>
     {
-        options
+        options.AddEnricher("Application", builder.Environment.ApplicationName)
+            .AddEnricher("Environment", builder.Environment.EnvironmentName)
+            .SetMinimumLogLevel("Default", LogLevel.Information)
+            .SetMinimumLogLevel("Microsoft", LogLevel.Warning);
+    })
+    .AddCentralLogger(builder.Services, options =>
+    {
+        options.SetLogKey("webapi")
+            .SetExchangeName("central-logs-exchange")
             .AddEnricher("Application", builder.Environment.ApplicationName)
             .AddEnricher("Environment", builder.Environment.EnvironmentName)
             .SetMinimumLogLevel("Default", LogLevel.Information)
@@ -28,16 +35,6 @@ builder.Services.AddShared(builder.Configuration)
 
 builder.Services.AddTransient<CorrelationMiddleware>();
 builder.Services.AddSingleton<RequestResponseLoggingMiddleware>();
-
-builder.Logging.AddCentralLogger(builder.Services, options =>
-{
-    options.SetLogKey("webapi")
-        .SetExchangeName("central-logs-exchange")
-        .AddEnricher("Application", builder.Environment.ApplicationName)
-        .AddEnricher("Environment", builder.Environment.EnvironmentName)
-        .SetMinimumLogLevel("Default", LogLevel.Information)
-        .SetMinimumLogLevel("Microsoft", LogLevel.Warning);
-});
 
 var app = builder.Build();
 app.UseMiddleware<CorrelationMiddleware>();

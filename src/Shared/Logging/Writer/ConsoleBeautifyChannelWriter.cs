@@ -1,44 +1,48 @@
 using System.Text.Json;
 using System.Threading.Channels;
+using Shared.Logging.Helpers;
 using Shared.Logging.Models;
+using Shared.Logging.Models.ConsoleBeautify;
 
 namespace Shared.Logging.Writer;
 
 public class ConsoleBeautifyChannelWriter
 {
-    private readonly Channel<ConsoleBeautifyLogRecord> _channel;
-    private readonly Task _writerTask;
+    private readonly ConsoleBeautifyChannelWriterConfiguration _options;
+    private readonly Channel<LogEntryModel> _channel;
 
-    public ConsoleBeautifyChannelWriter()
+    public ConsoleBeautifyChannelWriter(ConsoleBeautifyChannelWriterConfiguration options)
     {
-        var options = new BoundedChannelOptions(10000)
+        _options = options;
+        var channelOptions = new BoundedChannelOptions(10000)
         {
             FullMode = BoundedChannelFullMode.DropWrite
         };
-        _channel = Channel.CreateBounded<ConsoleBeautifyLogRecord>(options);
-        _writerTask = Task.Run(ProcessChannelAsync);
+        _channel = Channel.CreateBounded<LogEntryModel>(channelOptions);
+        Task.Run(ProcessChannelAsync);
     }
 
-    public void Write(ConsoleBeautifyLogRecord record)
+    public void Write(LogEntryModel logEntry)
     {
-        _channel.Writer.TryWrite(record);
+        _channel.Writer.TryWrite(logEntry);
     }
 
     private async Task ProcessChannelAsync()
     {
         try
         {
-            await foreach (var record in _channel.Reader.ReadAllAsync())
+            await foreach (var logEntry in _channel.Reader.ReadAllAsync())
             {
                 try
                 {
-                    if (record.IsJson)
+                    var logColor = _options.LogLevelColors[LoggerHelper.GetLogLevel(logEntry.Level)];
+                    if (_options.JsonFormatEnabled)
                     {
-                        WriteColoredJsonMessage(record);
+                        WriteColoredJsonMessage(logEntry, logColor);
                     }
                     else
                     {
-                        WriteColoredMessage(record);
+                        WriteColoredMessage(logEntry, logColor);
                     }
                 }
                 catch (Exception)
@@ -53,45 +57,46 @@ public class ConsoleBeautifyChannelWriter
         }
     }
 
-    private static void WriteColoredJsonMessage(ConsoleBeautifyLogRecord logRecord)
+    private static void WriteColoredJsonMessage(LogEntryModel logEntry, ConsoleColor color)
     {
         ConsoleColor originalColor = Console.ForegroundColor;
-        Console.ForegroundColor = logRecord.Color;
-        Console.WriteLine(JsonSerializer.Serialize(logRecord.LogEntry, LogEntryHelper.GetIntendOption));
+        Console.ForegroundColor = color;
+        Console.WriteLine(JsonSerializer.Serialize(logEntry, LogEntryHelper.GetIntendOption));
         Console.ForegroundColor = originalColor;
     }
 
-    private static void WriteColoredMessage(ConsoleBeautifyLogRecord logRecord)
+    private static void WriteColoredMessage(LogEntryModel logEntry, ConsoleColor color)
     {
         ConsoleColor originalColor = Console.ForegroundColor;
 
-        Console.ForegroundColor = logRecord.Color;
+        Console.ForegroundColor = color;
         Console.WriteLine("-------------------------------------------------");
-        Console.WriteLine($"[{logRecord.LogEntry.EventId,3}: {logRecord.LogEntry.Level,-12} - {logRecord.LogEntry.Timestamp:yyyy-MM-dd HH:mm:ss.fffffff}]");
+        Console.WriteLine($"[{logEntry.EventId,3}: {logEntry.Level,-12} - {logEntry.Timestamp:yyyy-MM-dd HH:mm:ss.fffffff}]");
 
-        Console.ForegroundColor = originalColor;
-        Console.Write("      Enrichers - ");
-
-        Console.ForegroundColor = logRecord.Color;
-        Console.Write($"{string.Join(", ", logRecord.LogEntry.Enrichers.Select(x => $"{x.Key}: {x.Value}"))}");
-
-        Console.WriteLine();
-
-        Console.ForegroundColor = originalColor;
-        Console.Write($"      {logRecord.LogEntry.Source} - ");
-
-        Console.ForegroundColor = logRecord.Color;
-        Console.Write($"{logRecord.LogEntry.Message}");
-
-        Console.WriteLine();
-
-        if (logRecord.LogEntry.Exception is not null)
+        if (logEntry.Enrichers.Count > 0)
         {
-            Console.WriteLine($"      {logRecord.LogEntry.Exception.GetExceptionDetailedMessage()}");
+            Console.ForegroundColor = originalColor;
+            Console.Write("      Enrichers - ");
+
+            Console.ForegroundColor = color;
+            Console.Write($"{string.Join(", ", logEntry.Enrichers.Select(x => $"{x.Key}: {x.Value}"))}");
+
+            Console.WriteLine();
+        }
+
+        Console.ForegroundColor = originalColor;
+        Console.Write($"      {logEntry.Source} - ");
+
+        Console.ForegroundColor = color;
+        Console.Write($"{logEntry.Message}");
+
+        Console.WriteLine();
+
+        if (logEntry.Exception is not null)
+        {
+            Console.WriteLine($"      {logEntry.Exception.GetExceptionDetailedMessage()}");
         }
 
         Console.ForegroundColor = originalColor;
     }
 }
-
-public sealed record ConsoleBeautifyLogRecord(ConsoleColor Color, bool IsJson, LogEntryModel LogEntry);

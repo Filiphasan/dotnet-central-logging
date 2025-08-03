@@ -1,76 +1,111 @@
 using System.Threading.Channels;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
+using Shared.Logging.Helpers;
 using Shared.Logging.Models;
+using Shared.Logging.Models.Central;
 using Shared.Messaging.Models;
 using Shared.Messaging.Services.Interfaces;
 
 namespace Shared.Logging.Writer;
 
-public class CentralLogChannelWriter
+public sealed class CentralLogChannelWriter
 {
-    private readonly Channel<CentralLogRecord> _channel;
-    private readonly Task _writerTask;
-    private readonly IPublishService _publishService;
+    private readonly Channel<LogEntryModel> _channel;
+    private readonly IPublishService _publishService = null!;
+    private readonly ConsoleBeautifyChannelWriter _consoleBeautifyChannelWriter;
+    private readonly FileLogChannelWriter _fileLogChannelWriter;
+    private readonly CentralLogChannelWriterConfiguration _options;
+    private static bool _isPublishServiceSet;
 
-    public CentralLogChannelWriter(IPublishService publishService)
+    public CentralLogChannelWriter(IServiceProvider serviceProvider, ConsoleBeautifyChannelWriter consoleBeautifyChannelWriter, CentralLogChannelWriterConfiguration options, FileLogChannelWriter fileLogChannelWriter)
     {
-        _publishService = publishService;
-        var options = new BoundedChannelOptions(20000)
+        _consoleBeautifyChannelWriter = consoleBeautifyChannelWriter;
+        _options = options;
+        _fileLogChannelWriter = fileLogChannelWriter;
+        if (!_isPublishServiceSet)
         {
-            FullMode = BoundedChannelFullMode.DropWrite,
+            _isPublishServiceSet = true;
+            _publishService = serviceProvider.GetRequiredService<IPublishService>();
+        }
+        var channelOptions = new BoundedChannelOptions(20_000)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest,
             SingleReader = false,
         };
-        _channel = Channel.CreateBounded<CentralLogRecord>(options);
-        _writerTask = Task.Run(ProcessChannelAsync);
+        _channel = Channel.CreateBounded<LogEntryModel>(channelOptions);
+        Task.Run(ProcessChannelAsync);
     }
 
-    public void Write(CentralLogRecord record)
+    public void Write(LogEntryModel logEntry)
     {
-        _channel.Writer.TryWrite(record);
+        _channel.Writer.TryWrite(logEntry);
     }
-
 
     private async Task ProcessChannelAsync()
     {
         try
         {
-            var settings = new ParallelOptions { MaxDegreeOfParallelism = 40 };
-            await Parallel.ForEachAsync(_channel.Reader.ReadAllAsync(), settings, async (record, token) =>
+            var settings = new ParallelOptions { MaxDegreeOfParallelism = _options.MaxParallelizm };
+            await Parallel.ForEachAsync(_channel.Reader.ReadAllAsync(), settings, async (logEntry, token) =>
             {
                 try
                 {
-                    await PublishAsync(record, token);
+                    var success = await PublishAsync(logEntry, token);
+                    if (!success)
+                    {
+                        _fileLogChannelWriter.Write(logEntry);
+                    }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Nothing
+                    HandleProcessChannelException(ex, logEntry);
                 }
             });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Nothing
+            HandleProcessChannelException(ex);
         }
     }
 
-    private async Task PublishAsync(CentralLogRecord record, CancellationToken cancellationToken = default)
+    private void HandleProcessChannelException(Exception exception, LogEntryModel? logEntry = null)
     {
-        var rkEnding = record.IsSpecific ? "specific" : "general";
+        if (logEntry is not null)
+        {
+            _fileLogChannelWriter.Write(logEntry);
+        }
+
+        _consoleBeautifyChannelWriter.Write(new LogEntryModel
+        {
+            Timestamp = DateTime.UtcNow,
+            Level = nameof(LogLevel.Error),
+            Source = "Shared.Logging.Writer.CentralLogChannelWriter",
+            Message = "CentralLogChannelWriter Critical Error",
+            Exception = LoggerHelper.ExtractExceptionDetail(exception),
+            Properties = null,
+        });
+    }
+
+    private async Task<bool> PublishAsync(LogEntryModel logEntry, CancellationToken cancellationToken = default)
+    {
+        // Add Circuit Breaker
+        var rkSuffix = _options.IsSpecific ? "specific" : "general";
         var publishMessageModel = new PublishMessageModel<LogEntryModel>
         {
-            Message = record.LogEntry,
+            Message = logEntry,
             CompressMessage = true,
             JsonSerializerOptions = LogEntryHelper.GetNonIntendOption,
             Exchange =
             {
-                Name = record.ExchanceName,
+                Name = _options.ExchangeName,
                 Type = ExchangeType.Topic,
             },
-            RoutingKey = $"project.{record.LogEntry.LogKey.ToLower()}.{rkEnding}",
+            RoutingKey = $"project.{logEntry.LogKey.ToLower()}.{rkSuffix}",
             TryCount = 5,
         };
         await _publishService.PublishAsync(publishMessageModel, cancellationToken);
+        return true;
     }
 }
-
-public sealed record CentralLogRecord(string ExchanceName, bool IsSpecific, LogEntryModel LogEntry);

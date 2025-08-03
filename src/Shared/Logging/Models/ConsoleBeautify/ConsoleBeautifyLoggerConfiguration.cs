@@ -5,15 +5,21 @@ namespace Shared.Logging.Models.ConsoleBeautify;
 
 public class ConsoleBeautifyLoggerConfiguration
 {
-    public bool IsConfigured { get; set; }
-    public bool JsonFormatEnabled { get; private set; }
-    public Dictionary<string, string> Enrichers { get; } = new();
-    public Dictionary<string, LogLevel> LogLevels { get; } = new();
-    public Dictionary<LogLevel, ConsoleColor> LogLevelColors { get; } = LoggerHelper.GetDefaultLogLevelColors();
+    internal bool JsonFormatEnabled { get; private set; }
+    internal LogLevel DefaultLogLevel { get; private set; } = LogLevel.Information;
+    internal Dictionary<string, string> Enrichers { get; } = new();
+    internal Dictionary<string, LogLevel> LogLevels { get; } = new();
+    internal Dictionary<LogLevel, ConsoleColor> LogLevelColors { get; } = LoggerHelper.GetDefaultLogLevelColors();
 
     public ConsoleBeautifyLoggerConfiguration SetJsonFormatEnabled()
     {
         JsonFormatEnabled = true;
+        return this;
+    }
+
+    public ConsoleBeautifyLoggerConfiguration SetDefaultLogLevel(LogLevel defaultLogLevel)
+    {
+        DefaultLogLevel = defaultLogLevel;
         return this;
     }
 
