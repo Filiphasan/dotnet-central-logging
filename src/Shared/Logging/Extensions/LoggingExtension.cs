@@ -8,7 +8,6 @@ using Shared.Logging.Models.ConsoleBeautify;
 using Shared.Logging.Models.FileLog;
 using Shared.Logging.Providers;
 using Shared.Logging.Writer;
-using Shared.Messaging.Services.Implementations;
 
 namespace Shared.Logging.Extensions;
 
