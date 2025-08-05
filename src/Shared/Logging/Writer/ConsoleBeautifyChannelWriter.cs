@@ -14,7 +14,7 @@ public class ConsoleBeautifyChannelWriter
     public ConsoleBeautifyChannelWriter(ConsoleBeautifyChannelWriterConfiguration options)
     {
         _options = options;
-        var channelOptions = new BoundedChannelOptions(10000)
+        var channelOptions = new BoundedChannelOptions(_options.ChannelBound)
         {
             FullMode = BoundedChannelFullMode.DropWrite
         };

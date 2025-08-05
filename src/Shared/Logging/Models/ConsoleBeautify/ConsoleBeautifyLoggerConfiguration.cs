@@ -10,6 +10,7 @@ public class ConsoleBeautifyLoggerConfiguration
     internal Dictionary<string, string> Enrichers { get; } = new();
     internal Dictionary<string, LogLevel> LogLevels { get; } = new();
     internal Dictionary<LogLevel, ConsoleColor> LogLevelColors { get; } = LoggerHelper.GetDefaultLogLevelColors();
+    internal int ChannelBound { get; private set; } = 10_000;
 
     public ConsoleBeautifyLoggerConfiguration SetJsonFormatEnabled()
     {
@@ -38,6 +39,12 @@ public class ConsoleBeautifyLoggerConfiguration
     public ConsoleBeautifyLoggerConfiguration SetLogLevelColor(LogLevel logLevel, ConsoleColor color)
     {
         LogLevelColors[logLevel] = color;
+        return this;
+    }
+
+    public ConsoleBeautifyLoggerConfiguration SetChannelBound(int channelBound)
+    {
+        ChannelBound = channelBound;
         return this;
     }
 }

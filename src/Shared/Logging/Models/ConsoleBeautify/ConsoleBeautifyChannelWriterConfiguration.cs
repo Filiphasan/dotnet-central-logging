@@ -7,4 +7,5 @@ public class ConsoleBeautifyChannelWriterConfiguration
 {
     internal bool JsonFormatEnabled { get; init; }
     internal Dictionary<LogLevel, ConsoleColor> LogLevelColors { get; init; } = LoggerHelper.GetDefaultLogLevelColors();
+    internal int ChannelBound { get; init; } = 10_000;
 }

@@ -88,5 +88,7 @@ public class ChannelPoolService(IConnectionManager connectionManager, MessagingO
                 logger.LogError(ex, "Error disposing channel on PurgeChannelPoolAsync");
             }
         }
+
+        logger.LogInformation("PurgeChannelPoolAsync done");
     }
 }

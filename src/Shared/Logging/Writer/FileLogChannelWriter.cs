@@ -26,7 +26,7 @@ public sealed class FileLogChannelWriter
     {
         _options = options;
         _consoleBeautifyChannelWriter = consoleBeautifyChannelWriter;
-        var channelOptions = new BoundedChannelOptions(10000) { FullMode = BoundedChannelFullMode.DropOldest };
+        var channelOptions = new BoundedChannelOptions(10000) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = false };
         _channel = Channel.CreateBounded<LogEntryModel>(channelOptions);
         Task.Run(ProcessChannelAsync);
     }

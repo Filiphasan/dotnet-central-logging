@@ -7,6 +7,7 @@ public class CentralLoggerConfiguration
     internal string LogKey { get; private set; } = string.Empty;
     internal bool IsSpecific { get; private set; }
     internal string ExchangeName { get; private set; } = string.Empty;
+    internal int ChannelBound { get; private set; } = 20_000;
     internal int MaxParallelizm { get; private set; } = 20;
     internal Dictionary<string, string> Enrichers { get; } = new();
     internal Dictionary<string, LogLevel> LogLevels { get; } = new();
@@ -26,6 +27,12 @@ public class CentralLoggerConfiguration
     public CentralLoggerConfiguration SetExchangeName(string exchangeName)
     {
         ExchangeName = exchangeName;
+        return this;
+    }
+
+    public CentralLoggerConfiguration SetChannelBound(int channelBound)
+    {
+        ChannelBound = channelBound;
         return this;
     }
 

@@ -26,15 +26,19 @@ public sealed class CentralLogChannelWriter
         _options = options;
         _fileLogChannelWriter = new FileLogChannelWriter(new FileLogChannelWriterConfiguration
         {
-            BaseFolder = "CentralFailedLogs",
+            BaseFolder = _options.FailedLogsBaseFolder,
             MaxParallelism = _options.MaxParallelizm,
+            WriteInterval = 10_000,
+            WriteSize = 1_000,
         }, consoleBeautifyChannelWriter);
+
         if (!_isPublishServiceSet)
         {
             _isPublishServiceSet = true;
             _publishService = serviceProvider.GetRequiredService<IPublishService>();
         }
-        var channelOptions = new BoundedChannelOptions(20_000)
+
+        var channelOptions = new BoundedChannelOptions(_options.ChannelBound)
         {
             FullMode = BoundedChannelFullMode.DropOldest,
             SingleReader = false,
