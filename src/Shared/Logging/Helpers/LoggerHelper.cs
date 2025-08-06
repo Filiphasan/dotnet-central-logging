@@ -161,4 +161,15 @@ public static class LoggerHelper
             _ => LogLevelConstant.Information
         };
     }
+
+    public static string GetFileLoggerPath(string baseFolder, DateTime date, bool createDirectory = true)
+    {
+        var folderPath = Path.Combine(AppContext.BaseDirectory, baseFolder, date.Year.ToString(), date.Month.ToString(), date.Day.ToString());
+        if (createDirectory)
+        {
+            Directory.CreateDirectory(folderPath);
+        }
+        var filePath = Path.Combine(folderPath, $"log-{date:yyyyMMdd-HH}.log");
+        return filePath;
+    }
 }

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Polly;
+using Polly.CircuitBreaker;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Shared.Messaging.Services.Interfaces;
@@ -10,11 +11,10 @@ public class RabbitMqConnectionManager : IConnectionManager
 {
     private readonly SemaphoreSlim _semaphoreSlim = new(1);
     private readonly AsyncPolicy _retryPolicy;
-
+    private readonly AsyncCircuitBreakerPolicy _circuitBreakerPolicy;
     private IConnection? _connection;
     private readonly IConnectionFactory _connectionFactory;
     private readonly ILogger<RabbitMqConnectionManager> _logger;
-
     private AsyncEventHandler<ShutdownEventArgs>? _connectionShutdownAsync;
     private Func<ShutdownEventArgs, Task>? _shutdownHandler;
 
@@ -25,11 +25,30 @@ public class RabbitMqConnectionManager : IConnectionManager
 
         _retryPolicy = Policy
             .Handle<Exception>()
-            .WaitAndRetryAsync(1, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+            .WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 (exception, timeSpan, _, retryCount) =>
                 {
                     _logger.LogError(exception, "RabbitMQ connection failed, retrying in {TimeOut}ms RetryCount: {RetryCount}", timeSpan.TotalMilliseconds, retryCount);
                 });
+
+        _circuitBreakerPolicy = Policy
+            .Handle<Exception>()
+            .CircuitBreakerAsync(
+                2,
+                TimeSpan.FromSeconds(30),
+                (exception, _, ts, _) =>
+                {
+                    _logger.LogWarning("RabbitMQ Connection Circuit Breaker OPENED for {Duration} minutes due to: {Error}", ts.TotalMinutes, exception.Message);
+                },
+                _ =>
+                {
+                    _logger.LogInformation("RabbitMQ Connection Circuit Breaker RESET - connection is healthy again");
+                },
+                () =>
+                {
+                    _logger.LogInformation("RabbitMQ Connection Circuit Breaker HALF-OPEN - testing connection health");
+                }
+            );
     }
 
     public bool IsConnected => _connection is { IsOpen: true };
@@ -58,22 +77,36 @@ public class RabbitMqConnectionManager : IConnectionManager
                 return;
             }
 
-            _connectionShutdownAsync = async (_, args) =>
+            try
             {
-                if (_shutdownHandler is not null)
+                await _circuitBreakerPolicy.ExecuteAsync(async () =>
                 {
-                    await _shutdownHandler(args);
-                }
+                    _connectionShutdownAsync = async (_, args) =>
+                    {
+                        if (_shutdownHandler is not null)
+                        {
+                            await _shutdownHandler(args);
+                        }
 
-                await OnConnectionShutdownAsync(args, cancellationToken);
-            };
-            await _retryPolicy.ExecuteAsync(async () =>
+                        await OnConnectionShutdownAsync(args, cancellationToken);
+                    };
+
+                    await _retryPolicy.ExecuteAsync(async () =>
+                    {
+                        await DisconnectAsync(cancellationToken);
+
+                        _connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
+                        _connection.ConnectionShutdownAsync += _connectionShutdownAsync;
+                        
+                        _logger.LogInformation("RabbitMQ connection established successfully");
+                    });
+                });
+            }
+            catch (BrokenCircuitException)
             {
-                await DisconnectAsync(cancellationToken);
-
-                _connection = await _connectionFactory.CreateConnectionAsync(cancellationToken);
-                _connection.ConnectionShutdownAsync += _connectionShutdownAsync;
-            });
+                _logger.LogError("RabbitMQ Connection Circuit Breaker is OPEN - connection attempts are blocked temporarily");
+                throw new InvalidOperationException("RabbitMQ connection is temporarily unavailable due to repeated connection failures. Please try again later.");
+            }
         }
         finally
         {

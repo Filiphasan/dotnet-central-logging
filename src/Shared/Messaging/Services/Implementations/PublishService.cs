@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json;
+using Polly;
+using Polly.CircuitBreaker;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Shared.Messaging.Models;

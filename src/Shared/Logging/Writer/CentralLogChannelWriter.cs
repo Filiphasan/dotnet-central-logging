@@ -61,11 +61,7 @@ public sealed class CentralLogChannelWriter
             {
                 try
                 {
-                    var success = await PublishAsync(logEntry, token);
-                    if (!success)
-                    {
-                        _fileLogChannelWriter.Write(logEntry);
-                    }
+                    await PublishAsync(logEntry, token);
                 }
                 catch (Exception ex)
                 {
@@ -97,9 +93,8 @@ public sealed class CentralLogChannelWriter
         });
     }
 
-    private async Task<bool> PublishAsync(LogEntryModel logEntry, CancellationToken cancellationToken = default)
+    private async Task PublishAsync(LogEntryModel logEntry, CancellationToken cancellationToken = default)
     {
-        // Add Circuit Breaker
         var rkSuffix = _options.IsSpecific ? "specific" : "general";
         var publishMessageModel = new PublishMessageModel<LogEntryModel>
         {
@@ -115,6 +110,5 @@ public sealed class CentralLogChannelWriter
             TryCount = 5,
         };
         await _publishService.PublishAsync(publishMessageModel, cancellationToken);
-        return true;
     }
 }

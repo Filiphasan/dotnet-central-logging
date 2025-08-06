@@ -7,6 +7,7 @@ using Shared.Logging.Models.Central;
 using Shared.Logging.Models.ConsoleBeautify;
 using Shared.Logging.Models.FileLog;
 using Shared.Logging.Providers;
+using Shared.Logging.Workers;
 using Shared.Logging.Writer;
 
 namespace Shared.Logging.Extensions;
@@ -91,6 +92,8 @@ public static class LoggingExtension
         services.TryAddSingleton(new ConsoleBeautifyChannelWriterConfiguration());
         services.TryAddSingleton<ConsoleBeautifyChannelWriter>();
         services.AddSingleton<CentralLogChannelWriter>();
+        services.AddHostedService<FailedCentralLogWorker>();
+        services.AddHostedService<DeleteExFailedCentralFileLogWorker>();
 
         // Alttaki kullanım normalde circular dependency hatası oluşturur çünkü
         // CentralLogChannelWriter içindeki servislerin bazıları ILogger bağımlı bu sorunun çözümü için CentralLogChannelWriter ctor içinde özel bir if eklendi

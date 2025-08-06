@@ -92,11 +92,8 @@ public sealed class FileLogChannelWriter
             await _streamWriter.DisposeAsync();
         }
 
-        var folderPath = Path.Combine(AppContext.BaseDirectory, _options.BaseFolder, utcNow.Year.ToString(), utcNow.Month.ToString(), utcNow.Day.ToString());
-        Directory.CreateDirectory(folderPath);
-        var filePath = Path.Combine(folderPath, $"log-{utcNow:yyyyMMdd-HH}.log");
-
-        _streamWriter = new StreamWriter(filePath, append: true, Encoding.UTF8, 64 * 1024) { AutoFlush = true }; // Toplu yazma yaptığımdan AutoFlush true ayarlı
+        var filePath = LoggerHelper.GetFileLoggerPath(_options.BaseFolder, utcNow);
+        _streamWriter = new StreamWriter(filePath, append: true, Encoding.UTF8, 64 * 1024) { AutoFlush = false }; // Manuel flush yapılıyor
         _writerDate = utcNow;
         return _streamWriter;
     }
@@ -106,19 +103,18 @@ public sealed class FileLogChannelWriter
         await _semaphore.WaitAsync();
         try
         {
-            if (_queue.IsEmpty)
-            {
-                return;
-            }
-
-            var builder = new StringBuilder();
-            while (_queue.TryDequeue(out var line))
-            {
-                builder.AppendLine(line);
-            }
+            if (_queue.IsEmpty) return;
 
             var streamWriter = await GetStreamWriterAsync();
-            await streamWriter.WriteAsync(builder);
+            int batchSize = Convert.ToInt32(Math.Ceiling(_options.WriteSize * 1.2));
+            var processedCount = 0;
+            while (_queue.TryDequeue(out var line) && processedCount < batchSize)
+            {
+                await streamWriter.WriteLineAsync(line.AsMemory());
+                processedCount++;
+            }
+
+            await streamWriter.FlushAsync();
         }
         finally
         {
