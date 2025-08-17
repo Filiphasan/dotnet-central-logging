@@ -17,6 +17,7 @@ public sealed class LogScopeManager : ILogScopeManager
     {
         var parent = CurrentScope.Value;
         var scope = LogScope.Rent(parent, state);
+        CurrentScope.Value = scope;
         return scope;
     }
 
@@ -27,59 +28,59 @@ public sealed class LogScopeManager : ILogScopeManager
 
         while (scope is not null)
         {
-            LoggerHelper.ExtractProperties(scope.State, properties);
+            LoggerHelper.ExtractProperties(scope.State, properties, "ScopeState");
             scope = scope.Parent;
         }
 
         return properties;
     }
+}
 
-    private sealed class LogScope : IDisposable
+public sealed class LogScope : IDisposable
+{
+    private static readonly ConcurrentStack<LogScope> Pool = new();
+    private const int MaxPoolSize = 100;
+
+    public LogScope? Parent { get; private set; }
+    public object? State { get; private set; }
+    private bool _isDisposed;
+
+    private LogScope() { }
+
+    public static LogScope Rent(LogScope? parent, object? state)
     {
-        private static readonly ConcurrentStack<LogScope> Pool = new();
-        private const int MaxPoolSize = 100;
-
-        public LogScope? Parent { get; private set; }
-        public object? State { get; private set; }
-        private bool _isDisposed;
-
-        private LogScope() { }
-
-        public static LogScope Rent(LogScope? parent, object? state)
+        if (Pool.TryPop(out var scope))
         {
-            if (Pool.TryPop(out var scope))
-            {
-                scope.Initialize(parent, state);
-                return scope;
-            }
-
-            return new LogScope { Parent = parent, State = state };
+            scope.Initialize(parent, state);
+            return scope;
         }
 
-        private void Initialize(LogScope? parent, object? state)
+        return new LogScope { Parent = parent, State = state };
+    }
+
+    private void Initialize(LogScope? parent, object? state)
+    {
+        Parent = parent;
+        State = state;
+        _isDisposed = false;
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
         {
-            Parent = parent;
-            State = state;
-            _isDisposed = false;
+            return;
         }
 
-        public void Dispose()
+        _isDisposed = true;
+
+        if (Pool.Count >= MaxPoolSize)
         {
-            if (_isDisposed)
-            {
-                return;
-            }
-
-            _isDisposed = true;
-
-            if (Pool.Count >= MaxPoolSize)
-            {
-                return;
-            }
-
-            Parent = null;
-            State = null;
-            Pool.Push(this);
+            return;
         }
+
+        Parent = null;
+        State = null;
+        Pool.Push(this);
     }
 }

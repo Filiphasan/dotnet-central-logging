@@ -35,17 +35,18 @@ public static class LoggerHelper
     {
         properties ??= new Dictionary<string, string?>();
 
-        if (state is IEnumerable<KeyValuePair<string, object>> stateProperties)
+        if (state is IEnumerable<KeyValuePair<string, object?>> stateProperties)
         {
             foreach (var property in stateProperties)
             {
                 if (property.Key.StartsWith('@'))
                 {
-                    properties[property.Key] = JsonSerializer.Serialize(property.Value, SerializerOptions);
+                    var key = property.Key[1..];
+                    properties[key] = JsonSerializer.Serialize(property.Value, SerializerOptions);
                 }
                 else
                 {
-                    properties[property.Key] = property.Value.ToString();
+                    properties[property.Key] = property.Value?.ToString();
                 }
             }
         }
