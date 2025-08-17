@@ -9,7 +9,7 @@ builder.Configuration
 
 builder.Logging
     .ClearProviders()
-    .AddConsoleBeautifyLogger(builder.Services, builder.Configuration, options =>
+    .AddConsoleBeautifyLogger(options =>
     {
         options.AddEnricher("Environment", builder.Environment.EnvironmentName);
     });

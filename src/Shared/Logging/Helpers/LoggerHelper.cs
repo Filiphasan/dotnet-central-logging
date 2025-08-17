@@ -31,9 +31,9 @@ public static class LoggerHelper
         };
     }
 
-    public static Dictionary<string, string?> ExtractProperties<TState>(TState state)
+    public static Dictionary<string, string?> ExtractProperties<TState>(TState state, Dictionary<string, string?>? properties = null, string stateName = "State")
     {
-        var properties = new Dictionary<string, string?>();
+        properties ??= new Dictionary<string, string?>();
 
         if (state is IEnumerable<KeyValuePair<string, object>> stateProperties)
         {
@@ -51,7 +51,7 @@ public static class LoggerHelper
         }
         else
         {
-            properties["State"] = JsonSerializer.Serialize(state, SerializerOptions);
+            properties[stateName] = JsonSerializer.Serialize(state, SerializerOptions);
         }
 
         return properties;

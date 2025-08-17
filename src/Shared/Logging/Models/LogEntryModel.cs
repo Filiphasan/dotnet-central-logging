@@ -13,6 +13,7 @@ public class LogEntryModel
     public int? EventId { get; set; }
     public string? EventName { get; set; }
     public string? Message { get; set; }
+    public string? MessageTemplate { get; set; }
     public ExceptionDetailModel? Exception { get; set; }
     public Dictionary<string, string> Enrichers { get; set; } = new();
     public Dictionary<string, string?>? Properties { get; set; }

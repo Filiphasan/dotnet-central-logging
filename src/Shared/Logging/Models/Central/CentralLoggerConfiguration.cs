@@ -10,6 +10,7 @@ public class CentralLoggerConfiguration
     internal int ChannelBound { get; private set; } = 20_000;
     internal int MaxParallelizm { get; private set; } = 20;
     internal Dictionary<string, string> Enrichers { get; } = new();
+    internal LogLevel DefaultLogLevel { get; private set; } = LogLevel.Information;
     internal Dictionary<string, LogLevel> LogLevels { get; } = new();
 
     public CentralLoggerConfiguration SetLogKey(string logKey)
@@ -45,6 +46,12 @@ public class CentralLoggerConfiguration
     public CentralLoggerConfiguration AddEnricher(string key, string value)
     {
         Enrichers[key] = value;
+        return this;
+    }
+
+    public CentralLoggerConfiguration SetDefaultLogLevel(LogLevel defaultLogLevel)
+    {
+        DefaultLogLevel = defaultLogLevel;
         return this;
     }
 

@@ -1,6 +1,6 @@
 namespace Web.Middlewares;
 
-public class CorrelationMiddleware : IMiddleware
+public class CorrelationMiddleware(ILogger logger) : IMiddleware
 {
     public const string CorrelationIdKey = "CorrelationId";
 
@@ -12,6 +12,9 @@ public class CorrelationMiddleware : IMiddleware
             context.Request.Headers[CorrelationIdKey] = correlationId;
         }
 
-        await next(context);
+        using (logger.BeginScope(new Dictionary<string, string?> { { CorrelationIdKey, correlationId } }))
+        {
+            await next(context);
+        }
     }
 }

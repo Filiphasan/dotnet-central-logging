@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Shared.Logging.Helpers;
+using Shared.Logging.Managers;
 using Shared.Logging.Models.Central;
 using Shared.Logging.Models.ConsoleBeautify;
 using Shared.Logging.Models.FileLog;
@@ -14,17 +15,13 @@ namespace Shared.Logging.Extensions;
 
 public static class LoggingExtension
 {
-    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, IServiceCollection services, IConfiguration configuration, Action<ConsoleBeautifyLoggerConfiguration> configure)
+    public static ILoggingBuilder AddConsoleBeautifyLogger(this ILoggingBuilder builder, Action<ConsoleBeautifyLoggerConfiguration> configure)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(configure);
 
         var options = new ConsoleBeautifyLoggerConfiguration();
         configure(options);
-
-        LoggerHelper.LoadConsoleBeautifyOptionsFromConfiguration(configuration, options);
 
         var writerOptions = new ConsoleBeautifyChannelWriterConfiguration
         {
@@ -33,17 +30,17 @@ public static class LoggingExtension
             ChannelBound = options.ChannelBound,
         };
 
-        services.AddSingleton(options);
-        services.AddSingleton(writerOptions);
-        services.AddSingleton<ConsoleBeautifyChannelWriter>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleBeautifyLoggerProvider>());
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton(writerOptions);
+        builder.Services.AddSingleton<ConsoleBeautifyChannelWriter>();
+        builder.Services.TryAddSingleton<ILogScopeManager, LogScopeManager>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, ConsoleBeautifyLoggerProvider>());
         return builder;
     }
 
-    public static ILoggingBuilder AddFileLogger(this ILoggingBuilder builder, IServiceCollection services, Action<FileLoggerConfiguration> configure)
+    public static ILoggingBuilder AddFileLogger(this ILoggingBuilder builder, Action<FileLoggerConfiguration> configure)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
         var options = new FileLoggerConfiguration();
@@ -57,19 +54,19 @@ public static class LoggingExtension
             BaseFolder = options.BaseFolder,
         };
 
-        services.AddSingleton(options);
-        services.AddSingleton(writerOptions);
-        services.TryAddSingleton(new ConsoleBeautifyChannelWriterConfiguration());
-        services.TryAddSingleton<ConsoleBeautifyChannelWriter>();
-        services.AddSingleton<FileLogChannelWriter>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, FileLoggerProvider>());
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton(writerOptions);
+        builder.Services.TryAddSingleton(new ConsoleBeautifyChannelWriterConfiguration());
+        builder.Services.TryAddSingleton<ConsoleBeautifyChannelWriter>();
+        builder.Services.AddSingleton<FileLogChannelWriter>();
+        builder.Services.TryAddSingleton<ILogScopeManager, LogScopeManager>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, FileLoggerProvider>());
         return builder;
     }
 
-    public static ILoggingBuilder AddCentralLogger(this ILoggingBuilder builder, IServiceCollection services, Action<CentralLoggerConfiguration> configure)
+    public static ILoggingBuilder AddCentralLogger(this ILoggingBuilder builder, Action<CentralLoggerConfiguration> configure)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
 
         var options = new CentralLoggerConfiguration();
@@ -87,17 +84,18 @@ public static class LoggingExtension
             ChannelBound = options.ChannelBound,
             MaxParallelizm = options.MaxParallelizm,
         };
-        services.AddSingleton(options);
-        services.AddSingleton(writerOptions);
-        services.TryAddSingleton(new ConsoleBeautifyChannelWriterConfiguration());
-        services.TryAddSingleton<ConsoleBeautifyChannelWriter>();
-        services.AddSingleton<CentralLogChannelWriter>();
-        services.AddHostedService<FailedCentralLogWorker>();
-        services.AddHostedService<DeleteExFailedCentralFileLogWorker>();
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton(writerOptions);
+        builder.Services.TryAddSingleton(new ConsoleBeautifyChannelWriterConfiguration());
+        builder.Services.TryAddSingleton<ConsoleBeautifyChannelWriter>();
+        builder.Services.AddSingleton<CentralLogChannelWriter>();
+        builder.Services.AddHostedService<FailedCentralLogWorker>();
+        builder.Services.AddHostedService<DeleteExFailedCentralFileLogWorker>();
+        builder.Services.TryAddSingleton<ILogScopeManager, LogScopeManager>();
 
         // Alttaki kullanım normalde circular dependency hatası oluşturur çünkü
         // CentralLogChannelWriter içindeki servislerin bazıları ILogger bağımlı bu sorunun çözümü için CentralLogChannelWriter ctor içinde özel bir if eklendi
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, CentralLoggerProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, CentralLoggerProvider>());
 
         // CentralLogChannelWriter içindeki özel çözüm kullanılmak istenmezse bu şekilde kullanılabilir
         // Ama bu da kendine ait bir CentralLogChannelWriter oluşturur (Genel DI konteynere ait olmayan bir CentralLogChannelWriter)

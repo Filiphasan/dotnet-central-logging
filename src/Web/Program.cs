@@ -11,14 +11,14 @@ builder.Configuration
     .AddEnvironmentVariables();
 
 builder.Logging.ClearProviders()
-    .AddConsoleBeautifyLogger(builder.Services, builder.Configuration, options =>
+    .AddConsoleBeautifyLogger(options =>
     {
         options.AddEnricher("Application", builder.Environment.ApplicationName)
             .AddEnricher("Environment", builder.Environment.EnvironmentName)
             .SetMinimumLogLevel("Default", LogLevel.Information)
             .SetMinimumLogLevel("Microsoft", LogLevel.Warning);
     })
-    .AddCentralLogger(builder.Services, options =>
+    .AddCentralLogger(options =>
     {
         options.SetLogKey("webapi")
             .SetExchangeName("central-logs-exchange")
