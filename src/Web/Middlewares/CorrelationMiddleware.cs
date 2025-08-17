@@ -12,7 +12,7 @@ public class CorrelationMiddleware(ILogger logger) : IMiddleware
             context.Request.Headers[CorrelationIdKey] = correlationId;
         }
 
-        using (logger.BeginScope(new Dictionary<string, string?> { { CorrelationIdKey, correlationId } }))
+        using (logger.BeginScope(new Dictionary<string, string?> { { "CorrelationIdKeyScoped", correlationId } }))
         {
             await next(context);
         }
